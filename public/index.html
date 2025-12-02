@@ -3,472 +3,325 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Cert Chain - Enterprise Dashboard</title>
+    <title>Pragma Enterprise Dashboard</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             padding: 20px;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 40px;
-        }
-
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-
-        .subtitle {
-            color: #666;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .section {
-            margin-bottom: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-
-        .section h2 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.3em;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-
-        input[type="file"],
-        input[type="text"],
-        select,
-        textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        input[type="file"] {
-            padding: 8px;
-            background: white;
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        /* Stile speciale per l'API Key */
-        #apiKeyInput {
-            font-family: monospace;
-            background-color: #f0f4ff;
-            border-color: #ccd7ff;
-            color: #4a5568;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 14px 30px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            display: none;
-        }
-
-        .result.success {
-            background: #d4edda;
-            border: 2px solid #28a745;
-            color: #155724;
-        }
-
-        .result.error {
-            background: #f8d7da;
-            border: 2px solid #dc3545;
-            color: #721c24;
-        }
-
-        .result pre {
-            background: rgba(0,0,0,0.05);
-            padding: 10px;
-            border-radius: 5px;
-            overflow-x: auto;
-            margin-top: 10px;
-            font-size: 12px;
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .loading.show {
-            display: block;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .file-info {
-            margin-top: 10px;
-            padding: 10px;
-            background: #e9ecef;
-            border-radius: 5px;
-            font-size: 12px;
-            color: #666;
-        }
-
-        .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #eee;
+            justify-content: center;
+            align-items: center;
         }
-
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        .header h1 { color: #333; font-size: 1.5rem; margin-bottom: 5px; }
+        .header p { color: #666; font-size: 0.9rem; }
+        
+        .tabs { display: flex; background: #eee; }
         .tab {
-            padding: 10px 20px;
-            cursor: pointer;
+            flex: 1;
+            padding: 15px;
             border: none;
             background: none;
-            font-size: 16px;
-            color: #666;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
-        }
-
-        .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            cursor: pointer;
             font-weight: 600;
+            color: #666;
+            transition: 0.3s;
+        }
+        .tab.active { background: white; color: #1e3c72; border-top: 3px solid #1e3c72; }
+        
+        .content { padding: 30px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; font-size: 0.9rem; }
+        
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        input:focus, select:focus { border-color: #1e3c72; outline: none; }
+        
+        /* Stile API Key Input */
+        #apiKeyInput {
+            background-color: #f0f7ff;
+            border-color: #cce0ff;
+            font-family: monospace;
+            color: #004085;
         }
 
-        .tab-content {
+        /* Upload Box */
+        .upload-box {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: #fafafa;
+        }
+        .upload-box:hover { border-color: #1e3c72; background: #f0f4f8; }
+        .file-info { margin-top: 10px; font-size: 0.85rem; color: #666; }
+
+        /* Bottoni */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-primary { background: #1e3c72; color: white; }
+        .btn-primary:hover { background: #162c55; }
+        
+        /* Bottone PDF */
+        .btn-pdf {
+            display: block;
+            text-align: center;
+            background: #ff4757;
+            color: white;
+            text-decoration: none;
+            margin-top: 15px;
+        }
+        .btn-pdf:hover { background: #ff6b81; }
+
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* Risultati */
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 0.9rem;
             display: none;
         }
-
-        .tab-content.active {
-            display: block;
+        .success { background: #e3f9e5; border: 1px solid #28a745; color: #0f5132; }
+        .error { background: #ffebee; border: 1px solid #ff4757; color: #c62828; }
+        
+        code { background: rgba(0,0,0,0.1); padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        
+        /* Loader */
+        .loader { display: none; text-align: center; margin-top: 15px; }
+        .spinner {
+            width: 30px; height: 30px; border: 3px solid #f3f3f3;
+            border-top: 3px solid #1e3c72; border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto 10px;
         }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔐 Content Cert Chain</h1>
-        <p class="subtitle">Enterprise API Dashboard</p>
 
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('certify')">Certifica</button>
-            <button class="tab" onclick="showTab('verify')">Verifica</button>
-        </div>
-
-        <div id="certify-tab" class="tab-content active">
-            <div class="section">
-                <h2>📤 Carica e Certifica Contenuto</h2>
-                
-                <form id="certifyForm">
-                    <div class="form-group">
-                        <label for="apiKeyInput">🔑 API Key (Richiesta per Auth)</label>
-                        <input type="text" id="apiKeyInput" placeholder="Incolla qui la tua API Key" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fileInput">Seleziona File (Foto, Video, Documento, ecc.)</label>
-                        <input type="file" id="fileInput" accept="*/*">
-                        <div id="fileInfo" class="file-info" style="display: none;"></div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fileUrl">OPPURE inserisci URL del file</label>
-                        <input type="text" id="fileUrl" placeholder="https://example.com/file.jpg">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="creatorWallet">Indirizzo Wallet (Opzionale)</label>
-                        <input type="text" id="creatorWallet" placeholder="0x..." value="0x03454f6CdB45B55AFE58a86008B65e085028Bd31">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="contentType">Tipo di Contenuto</label>
-                        <select id="contentType">
-                            <option value="human">Umano</option>
-                            <option value="ai">AI Generato</option>
-                            <option value="mixed">Misto</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn" id="certifyBtn">Certifica Contenuto</button>
-                </form>
-
-                <div class="loading" id="certifyLoading">
-                    <div class="spinner"></div>
-                    <p>Certificazione su Blockchain in corso...</p>
-                </div>
-
-                <div class="result" id="certifyResult"></div>
-            </div>
-        </div>
-
-        <div id="verify-tab" class="tab-content">
-            <div class="section">
-                <h2>🔍 Verifica Certificazione</h2>
-                
-                <form id="verifyForm">
-                    <div class="form-group">
-                        <label for="hashInput">Hash del Contenuto</label>
-                        <input type="text" id="hashInput" placeholder="0x..." required>
-                        <small style="color: #666; margin-top: 5px; display: block;">
-                            Inserisci l'hash che hai ricevuto dopo la certificazione
-                        </small>
-                    </div>
-
-                    <button type="submit" class="btn" id="verifyBtn">Verifica</button>
-                </form>
-
-                <div class="loading" id="verifyLoading">
-                    <div class="spinner"></div>
-                    <p>Verifica su Blockchain e DB in corso...</p>
-                </div>
-
-                <div class="result" id="verifyResult"></div>
-            </div>
-        </div>
+<div class="container">
+    <div class="header">
+        <h1>🛡️ Pragma Enterprise</h1>
+        <p>Blockchain Notarization & Certification API</p>
     </div>
 
-    <script>
-        const API_BASE = window.location.origin;
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('certify')">Certifica</button>
+        <button class="tab" onclick="switchTab('verify')">Verifica</button>
+    </div>
 
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
+    <div class="content">
+        
+        <div id="certifyTab" class="tab-content active">
+            <form id="certifyForm">
+                <div class="form-group">
+                    <label>🔑 API Key (Richiesta)</label>
+                    <input type="text" id="apiKeyInput" placeholder="Incolla qui la tua API Key (es. pk_live_...)" required>
+                </div>
 
-            document.getElementById(tabName + '-tab').classList.add('active');
-            event.target.classList.add('active');
+                <div class="form-group">
+                    <label>📄 Documento da Certificare</label>
+                    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+                        <span id="uploadText">Clicca per selezionare un file</span>
+                        <input type="file" id="fileInput" hidden>
+                    </div>
+                    <div id="fileInfo" class="file-info"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>👤 Wallet Creatore (Opzionale)</label>
+                    <input type="text" id="creatorWallet" placeholder="Es. 0x123...">
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="certBtn">Certifica su Blockchain</button>
+            </form>
+
+            <div id="certLoader" class="loader">
+                <div class="spinner"></div>
+                <p>Notarizzazione in corso...<br><small>Attendere la conferma dalla Blockchain</small></p>
+            </div>
+
+            <div id="certResult" class="result"></div>
+        </div>
+
+        <div id="verifyTab" class="tab-content">
+            <form id="verifyForm">
+                <div class="form-group">
+                    <label>🔍 Hash del File</label>
+                    <input type="text" id="hashInput" placeholder="Incolla l'hash (0x...)" required>
+                </div>
+                <button type="submit" class="btn btn-primary" id="verBtn">Verifica</button>
+            </form>
+
+            <div id="verLoader" class="loader">
+                <div class="spinner"></div>
+                <p>Consultazione Blockchain...</p>
+            </div>
+
+            <div id="verResult" class="result"></div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const API_BASE = window.location.origin;
+
+    // Gestione Tabs
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        event.target.classList.add('active');
+        document.getElementById(tab + 'Tab').classList.add('active');
+    }
+
+    // Gestione File
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if(file) {
+            document.getElementById('uploadText').innerText = "File selezionato!";
+            document.getElementById('fileInfo').innerText = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
         }
+    });
 
-        // Gestione file input
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const fileInfo = document.getElementById('fileInfo');
-                fileInfo.style.display = 'block';
-                fileInfo.innerHTML = `
-                    <strong>File selezionato:</strong> ${file.name}<br>
-                    <strong>Dimensione:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
-                    <strong>Tipo:</strong> ${file.type || 'Sconosciuto'}
+    // LOGICA CERTIFICAZIONE
+    document.getElementById('certifyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const wallet = document.getElementById('creatorWallet').value.trim();
+        const file = fileInput.files[0];
+        const resultBox = document.getElementById('certResult');
+        const loader = document.getElementById('certLoader');
+        const btn = document.getElementById('certBtn');
+
+        if (!file) return alert("Seleziona un file!");
+        if (!apiKey) return alert("API Key mancante!");
+
+        // UI Updates
+        btn.disabled = true;
+        loader.style.display = 'block';
+        resultBox.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('file', file);
+        if(wallet) formData.append('creator_wallet', wallet);
+
+        try {
+            const res = await fetch(`${API_BASE}/certify`, {
+                method: 'POST',
+                headers: { 'x-api-key': apiKey },
+                body: formData
+            });
+
+            const data = await res.json();
+            resultBox.style.display = 'block';
+            loader.style.display = 'none';
+            btn.disabled = false;
+
+            if (res.ok) {
+                resultBox.className = 'result success';
+                resultBox.innerHTML = `
+                    <h3>✅ Certificazione Riuscita!</h3>
+                    <p style="margin-top:10px"><strong>Hash File:</strong> <code>${data.hash.substring(0,20)}...</code></p>
+                    <p><strong>TX Hash:</strong> <a href="https://sepolia.etherscan.io/tx/${data.tx_hash}" target="_blank">Vedi su Etherscan</a></p>
+                    
+                    <a href="${API_BASE}/download/${data.hash}" target="_blank" class="btn btn-pdf">
+                        📄 Scarica Certificato Ufficiale (PDF)
+                    </a>
                 `;
-            }
-        });
-
-        // Form Certifica
-        document.getElementById('certifyForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const apiKey = document.getElementById('apiKeyInput').value; // Recupera API Key
-            const fileInput = document.getElementById('fileInput');
-            const fileUrl = document.getElementById('fileUrl').value;
-            const creatorWallet = document.getElementById('creatorWallet').value;
-            const contentType = document.getElementById('contentType').value;
-            
-            if (!apiKey) {
-                alert("L'API Key è obbligatoria per la certificazione!");
-                return;
+            } else {
+                resultBox.className = 'result error';
+                resultBox.innerHTML = `<strong>Errore:</strong> ${data.message || data.error || 'Sconosciuto'}`;
             }
 
-            const loading = document.getElementById('certifyLoading');
-            const result = document.getElementById('certifyResult');
-            const btn = document.getElementById('certifyBtn');
+        } catch (err) {
+            loader.style.display = 'none';
+            btn.disabled = false;
+            resultBox.style.display = 'block';
+            resultBox.className = 'result error';
+            resultBox.innerHTML = `<strong>Errore di connessione:</strong> ${err.message}`;
+        }
+    });
+
+    // LOGICA VERIFICA
+    document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const hash = document.getElementById('hashInput').value.trim();
+        const resultBox = document.getElementById('verResult');
+        const loader = document.getElementById('verLoader');
+        
+        loader.style.display = 'block';
+        resultBox.style.display = 'none';
+
+        try {
+            const res = await fetch(`${API_BASE}/verify/${hash}`);
+            const data = await res.json();
             
-            loading.classList.add('show');
-            result.style.display = 'none';
-            btn.disabled = true;
+            loader.style.display = 'none';
+            resultBox.style.display = 'block';
 
-            try {
-                const formData = new FormData();
-                
-                if (fileInput.files[0]) {
-                    formData.append('file', fileInput.files[0]);
-                } else if (fileUrl) {
-                    formData.append('file_url', fileUrl);
-                } else {
-                    throw new Error('Seleziona un file o inserisci un URL');
-                }
-                
-                // NOTA: 'clientId' non serve più nel body, viene dedotto dall'API Key
-                formData.append('creator_wallet', creatorWallet);
-                formData.append('declared_type', contentType);
-
-                // --- CHIAMATA CON AUTH HEADER ---
-                const response = await fetch(`${API_BASE}/certify`, {
-                    method: 'POST',
-                    headers: {
-                        'x-api-key': apiKey // <--- Header di Sicurezza
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    result.className = 'result success';
-                    result.innerHTML = `
-                        <h3>✅ Certificazione Riuscita!</h3>
-                        <p><strong>Hash:</strong> ${data.hash}</p>
-                        <p><strong>TX Hash:</strong> ${data.tx_hash}</p>
-                        <p><strong>Addebitato a:</strong> ${data.usage_billed_to}</p>
-                        ${data.data ? `<p><strong>ID Database:</strong> ${data.data.cert_id}</p>` : ''}
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
-                        <p style="margin-top: 10px;">
-                            <strong>💡 Copia l'hash per verificarlo:</strong><br>
-                            <code style="background: rgba(0,0,0,0.1); padding: 5px; border-radius: 3px;">${data.hash}</code>
-                        </p>
-                    `;
-                } else {
-                    // Gestione Errori (es. 401 Unauthorized, 403 Forbidden)
-                    result.className = 'result error';
-                    result.innerHTML = `
-                        <h3>❌ Errore (${response.status})</h3>
-                        <p>${data.message || data.error || 'Errore sconosciuto'}</p>
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
-                    `;
-                }
-            } catch (error) {
-                result.className = 'result error';
-                result.innerHTML = `
-                    <h3>❌ Errore di Rete</h3>
-                    <p>${error.message}</p>
+            if (res.ok) {
+                resultBox.className = 'result success';
+                resultBox.innerHTML = `
+                    <h3>✅ File Autentico</h3>
+                    <p>Questo file è stato notarizzato su Blockchain.</p>
+                    <ul style="margin-top:10px; padding-left:20px">
+                        <li><strong>Timestamp:</strong> ${new Date(data.timestamp * 1000).toLocaleString()}</li>
+                        <li><strong>Creatore:</strong> ${data.creator}</li>
+                    </ul>
                 `;
-            } finally {
-                loading.classList.remove('show');
-                result.style.display = 'block';
-                btn.disabled = false;
+            } else {
+                resultBox.className = 'result error';
+                resultBox.innerHTML = `⚠️ <strong>Non Trovato:</strong> Questo hash non esiste nel registro.`;
             }
-        });
+        } catch (err) {
+            loader.style.display = 'none';
+            resultBox.style.display = 'block';
+            resultBox.className = 'result error';
+            resultBox.innerHTML = `Errore: ${err.message}`;
+        }
+    });
+</script>
 
-        // Form Verifica (Resta pubblico, nessuna API Key necessaria)
-        document.getElementById('verifyForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const hash = document.getElementById('hashInput').value.trim();
-            
-            if (!hash) {
-                alert('Inserisci un hash valido');
-                return;
-            }
-
-            const loading = document.getElementById('verifyLoading');
-            const result = document.getElementById('verifyResult');
-            const btn = document.getElementById('verifyBtn');
-            
-            loading.classList.add('show');
-            result.style.display = 'none';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch(`${API_BASE}/verify/${encodeURIComponent(hash)}`);
-                const data = await response.json();
-
-                if (response.ok && data.status === 'found') {
-                    result.className = 'result success';
-                    result.innerHTML = `
-                        <h3>✅ Certificazione Trovata!</h3>
-                        <p><strong>Fonte:</strong> ${data.source}</p>
-                        <p><strong>Hash:</strong> ${data.hash}</p>
-                        <p><strong>Creatore:</strong> ${data.creator}</p>
-                        <p><strong>Tipo:</strong> ${data.declared_type}</p>
-                        <p><strong>Timestamp:</strong> ${data.timestamp !== "0" ? new Date(parseInt(data.timestamp) * 1000).toLocaleString() : 'Pending'}</p>
-                        ${data.metadata ? `<p><strong>Nome File Originale:</strong> ${data.metadata.fileName}</p>` : ''}
-                        <pre>${JSON.stringify(data, null, 2)}</pre>
-                    `;
-                } else {
-                    result.className = 'result error';
-                    result.innerHTML = `
-                        <h3>⚠️ Non Trovato</h3>
-                        <p>${data.message || 'Hash non trovato.'}</p>
-                    `;
-                }
-            } catch (error) {
-                result.className = 'result error';
-                result.innerHTML = `
-                    <h3>❌ Errore</h3>
-                    <p>${error.message}</p>
-                `;
-            } finally {
-                loading.classList.remove('show');
-                result.style.display = 'block';
-                btn.disabled = false;
-            }
-        });
-    </script>
 </body>
 </html>

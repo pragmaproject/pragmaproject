@@ -77,6 +77,15 @@ app.use((err, req, res, next) => {
     });
 });
 
+// ... altre rotte ...
+app.use("/certify", requireApiKey, require("./routes/certify"));
+app.use("/history", requireApiKey, require("./routes/history"));
+
+// NUOVA ROTTA PDF (Pubblica, così si può scaricare facilmente)
+app.use("/download", require("./routes/download")); 
+
+// ... gestione errori ...
+
 // =========================================================
 // 6. AVVIO DEL SERVER
 // =========================================================
