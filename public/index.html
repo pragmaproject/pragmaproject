@@ -24,7 +24,7 @@
             overflow: hidden;
         }
         .header {
-            background: #f8f9fa;
+            background: #f8ff;
             padding: 20px;
             text-align: center;
             border-bottom: 1px solid #eee;
@@ -193,6 +193,15 @@
                     </div>
                     <div id="fileInfo" class="file-info"></div>
                 </div>
+                
+                <div class="form-group">
+                    <label>💻 Origine Contenuto (AI Labeling)</label>
+                    <select id="contentType">
+                        <option value="human">Umano (Creato interamente da persona)</option>
+                        <option value="ai">AI Generato (Es. Midjourney, ChatGPT)</option>
+                        <option value="mixed">Misto (Ritocco, Assemblaggio AI/Umano)</option>
+                    </select>
+                </div>
 
                 <div class="form-group">
                     <label>👤 Wallet Creatore (Opzionale)</label>
@@ -322,6 +331,7 @@
         
         const apiKey = document.getElementById('apiKeyInput').value.trim();
         const wallet = document.getElementById('creatorWallet').value.trim();
+        const contentType = document.getElementById('contentType').value; // <--- VALORE RECUPERATO QUI
         const file = fileInput.files[0];
         const resultBox = document.getElementById('certResult');
         const loader = document.getElementById('certLoader');
@@ -336,6 +346,7 @@
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('declared_type', contentType); // <--- VALORE INVIATO QUI
         if(wallet) formData.append('creator_wallet', wallet);
 
         try {
@@ -384,7 +395,7 @@
         }
     });
 
-    // LOGICA VERIFICA (FIX APPLICATO QUI)
+    // LOGICA VERIFICA
     document.getElementById('verifyForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const hash = document.getElementById('hashInput').value.trim();
@@ -402,7 +413,6 @@
             resultBox.style.display = 'block';
 
             if (res.ok) {
-                // 1. Ottiene l'etichetta Umano/AI/Misto
                 const contentTypeLabel = getContentTypeLabel(data.contentType); 
 
                 resultBox.className = 'result success';
