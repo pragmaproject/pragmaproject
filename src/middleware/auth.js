@@ -26,7 +26,6 @@ const requireApiKey = async (req, res, next) => {
             .single();
 
         if (error || !keyData) {
-            console.error("Auth DB Error:", error); // LOG ERRORE DB
             return res.status(403).json({ error: "Forbidden", message: "API Key non valida." });
         }
 
@@ -36,37 +35,36 @@ const requireApiKey = async (req, res, next) => {
 
         const client = keyData.clients;
 
-        // --- 🔍 DEBUG LOG (GUARDARE QUI!) ---
-        console.log("------------------------------------------------");
-        console.log("👤 CLIENTE IDENTIFICATO:", client.id);
-        console.log("📊 PIANO:", `'${client.plan}'`); // Gli apici mostrano se ci sono spazi
-        console.log("🔢 CONTATORE:", client.usage_count, "(Tipo:", typeof client.usage_count, ")");
-        console.log("------------------------------------------------");
-
-        // --- BLOCCO LIMITI ---
+        // 2. Controllo Limiti (Solo per chi scrive/certifica)
         const USAGE_LIMIT = 1000;
-        
-        // Normalizziamo il piano (togliamo spazi e maiuscole per sicurezza)
         const planNormalized = (client.plan || "").trim().toLowerCase();
         
-        // Controllo robusto: Se è 'starter' E (il contatore esiste E supera il limite)
-        if (planNormalized === 'starter' && client.usage_count >= USAGE_LIMIT) {
-            
-            console.log("🛑 BLOCCO SCATTATO! Limite raggiunto.");
-            
+        // Blocchiamo solo se sta provando a SCRIVERE (POST) e ha finito i crediti
+        // Se vuole solo LEGGERE (GET /usage o /history), lo lasciamo passare
+        if (req.method === 'POST' && planNormalized === 'starter' && client.usage_count >= USAGE_LIMIT) {
             return res.status(402).json({ 
                 error: "Payment Required", 
-                message: `Hai raggiunto il limite del piano Starter (${USAGE_LIMIT} richieste). Contatta sales@pragma.io.` 
+                message: `Hai raggiunto il limite del piano Starter. Contatta sales@pragma.io.` 
             });
         }
 
-        // 4. Tutto OK
+        // 3. Iniettiamo il cliente
         req.user = { clientId: client.id, plan: client.plan };
-        trackUsage(client.id, req.path, req.method, req.ip);
+
+        // 4. TRACCIAMENTO INTELLIGENTE (FIX BUG) 🛠️
+        // Incrementiamo il contatore SOLO se è una operazione di scrittura (POST)
+        // Le letture (GET) non consumano quota.
+        if (req.method === 'POST') {
+            trackUsage(client.id, req.path, req.method, req.ip);
+            console.log(`📊 Usage +1 per ${client.id} (Certificazione)`);
+        } else {
+            console.log(`👀 Read-only access per ${client.id} (Gratuito)`);
+        }
+
         next();
 
     } catch (err) {
-        console.error("Auth Crash:", err);
+        console.error("Auth Error:", err);
         return res.status(500).json({ error: "Internal Server Error" });
     }
 };
