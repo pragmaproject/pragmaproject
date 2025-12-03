@@ -5,31 +5,28 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'Pragma Enterprise API',
-      version: '2.0.0', // Major version update per il nuovo Smart Contract
+      version: '2.1.0', // Minor version update per le feature di billing
       description: `
 ### 🛡️ Trust Infrastructure for the AI Era
 Pragma è l'API standard per la notarizzazione e certificazione di asset digitali su Blockchain Proprietaria.
 
-**Core Features:**
-* **Smart Contract Registry:** Ogni certificazione è registrata nel contratto \`ContentCert\` su Sepolia.
-* **AI Labeling:** Classificazione immutabile del contenuto (Human vs AI).
-* **Proof of Ownership:** Associa indissolubilmente il Wallet del creatore al contenuto.
-* **Enterprise Ready:** Webhooks, PDF ufficiali e API Key security.
+**Funzionalità Enterprise:**
+* **Immutabilità:** Timestamp certo su Blockchain (Sepolia/Ethereum).
+* **Verificabilità:** Verifica integrità tramite Hash SHA-256.
+* **Certificati PDF:** Generazione automatica certificati ufficiali.
+* **Webhooks:** Notifiche in tempo reale server-to-server.
+* **Usage Tracking:** Monitoraggio trasparente dei consumi e dei limiti.
 
 ---
 **Quick Start:**
 1. Clicca **Authorize** e inserisci la tua API Key (es. \`pk_live_123456789\`).
-2. Usa \`/certify\` per caricare un file e definire se è AI o Umano.
-3. Scarica il certificato PDF da \`/download\`.
+2. Usa \`/certify\` per caricare un file.
+3. Controlla i tuoi consumi su \`/usage\`.
       `,
       contact: {
         name: 'Pragma Developer Support',
         email: 'dev-support@pragma.io',
         url: 'https://pragma.io'
-      },
-      license: {
-        name: 'Pragma Enterprise License',
-        url: 'https://pragma.io/terms'
       }
     },
     servers: [
@@ -52,6 +49,17 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
         },
       },
       schemas: {
+        // --- RISPOSTA USAGE (BILLING) ---
+        UsageResponse: {
+          type: 'object',
+          properties: {
+            client: { type: 'string', example: 'TechCorp Inc.' },
+            plan: { type: 'string', example: 'Enterprise' },
+            total_requests: { type: 'integer', example: 1250, description: 'Numero totale di chiamate API effettuate' },
+            limit: { type: 'string', example: 'Unlimited' },
+            status: { type: 'string', example: 'active' }
+          }
+        },
         // --- RISPOSTA CERTIFICAZIONE ---
         CertificationResponse: {
           type: 'object',
@@ -60,14 +68,7 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
             hash: { type: 'string', example: '0x8f432b...', description: "L'impronta digitale unica (SHA-256) del file." },
             tx_hash: { type: 'string', example: '0xabc123...', description: "Hash della transazione sul registro Smart Contract." },
             usage_billed_to: { type: 'string', example: 'cust_demo_enterprise' },
-            data: {
-              type: 'object',
-              description: 'Dettagli salvati nel database off-chain.',
-              properties: {
-                cert_id: { type: 'string' },
-                metadata: { type: 'object' }
-              }
-            }
+            data: { type: 'object' }
           }
         },
         // --- RISPOSTA VERIFICA ---
@@ -113,6 +114,21 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
     ],
     // --- ROTTE ---
     paths: {
+      '/usage': {  // <--- NUOVA ROTTA BILLING
+        get: {
+          summary: 'Controlla consumi e piano',
+          description: 'Restituisce il numero di chiamate effettuate e il piano tariffario attivo.',
+          tags: ['Billing'],
+          security: [{ ApiKeyAuth: [] }],
+          responses: {
+            200: {
+              description: 'Stato attuale dei consumi',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/UsageResponse' } } }
+            },
+            401: { description: 'Non autorizzato' }
+          }
+        }
+      },
       '/certify': {
         post: {
           summary: 'Certifica un Asset Digitale',
@@ -134,7 +150,7 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
                     },
                     creator_wallet: {
                       type: 'string',
-                      description: 'Wallet proprietario del contenuto (Opzionale, default: System Wallet).'
+                      description: 'Wallet proprietario del contenuto (Opzionale).'
                     },
                     declared_type: {
                       type: 'string',
@@ -170,21 +186,14 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
               description: 'Certificazione avviata con successo',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/CertificationResponse' } } }
             },
-            409: {
-              description: 'Conflitto: Il file è già stato certificato in precedenza.',
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
-            },
-            401: {
-              description: 'Non autorizzato',
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
-            }
+            409: { description: 'Conflitto: File già certificato' },
+            401: { description: 'Non autorizzato' }
           }
         }
       },
       '/verify/{hash}': {
         get: {
           summary: 'Verifica autenticità (On-Chain)',
-          description: 'Interroga direttamente lo Smart Contract per verificare l\'esistenza e i metadati di un hash.',
           tags: ['Core'],
           security: [], // Pubblico
           parameters: [
@@ -201,18 +210,15 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
               description: 'Certificazione trovata',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/VerificationResponse' } } }
             },
-            404: {
-              description: 'Non trovato sul registro Blockchain'
-            }
+            404: { description: 'Non trovato' }
           }
         }
       },
       '/download/{hash}': {
         get: {
           summary: 'Scarica Certificato PDF',
-          description: 'Genera al volo un certificato PDF ufficiale con QR Code di verifica.',
           tags: ['Tools'],
-          security: [], // Pubblico per facilitare la condivisione
+          security: [], // Pubblico
           parameters: [
             {
               in: 'path',
@@ -224,13 +230,9 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
           responses: {
             200: {
               description: 'File PDF binario',
-              content: {
-                'application/pdf': {
-                  schema: { type: 'string', format: 'binary' }
-                }
-              }
+              content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } }
             },
-            404: { description: 'Certificato non trovato' }
+            404: { description: 'Non trovato' }
           }
         }
       },
@@ -248,7 +250,7 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
             }
           ],
           responses: {
-            200: { description: 'Lista completa delle certificazioni effettuate' }
+            200: { description: 'Lista certificazioni' }
           }
         }
       }
