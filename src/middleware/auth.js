@@ -1,5 +1,6 @@
 const supabase = require("../lib/supabase");
-const { trackUsage } = require("../lib/usage");
+// Rimuoviamo trackUsage da qui, lo useremo solo nel controller
+// const { trackUsage } = require("../lib/usage"); 
 
 const requireApiKey = async (req, res, next) => {
     const apiKey = req.headers['x-api-key'];
@@ -35,12 +36,11 @@ const requireApiKey = async (req, res, next) => {
 
         const client = keyData.clients;
 
-        // 2. Controllo Limiti (Solo per chi scrive/certifica)
+        // 2. Controllo Limiti (PREVENTIVO)
+        // Controlliamo se ha ABBASTANZA crediti, ma NON li scaliamo ancora.
         const USAGE_LIMIT = 1000;
         const planNormalized = (client.plan || "").trim().toLowerCase();
         
-        // Blocchiamo solo se sta provando a SCRIVERE (POST) e ha finito i crediti
-        // Se vuole solo LEGGERE (GET /usage o /history), lo lasciamo passare
         if (req.method === 'POST' && planNormalized === 'starter' && client.usage_count >= USAGE_LIMIT) {
             return res.status(402).json({ 
                 error: "Payment Required", 
@@ -51,15 +51,9 @@ const requireApiKey = async (req, res, next) => {
         // 3. Iniettiamo il cliente
         req.user = { clientId: client.id, plan: client.plan };
 
-        // 4. TRACCIAMENTO INTELLIGENTE (FIX BUG) 🛠️
-        // Incrementiamo il contatore SOLO se è una operazione di scrittura (POST)
-        // Le letture (GET) non consumano quota.
-        if (req.method === 'POST') {
-            trackUsage(client.id, req.path, req.method, req.ip);
-            console.log(`📊 Usage +1 per ${client.id} (Certificazione)`);
-        } else {
-            console.log(`👀 Read-only access per ${client.id} (Gratuito)`);
-        }
+        // NOTA: Abbiamo rimosso trackUsage() da qui.
+        // L'addebito avverrà solo in certify.js dopo il successo.
+        console.log(`🔐 Accesso autorizzato: ${client.id}`);
 
         next();
 
