@@ -1,3 +1,4 @@
+const { triggerWebhook } = require("../lib/webhooks"); // <--- NUOVO IMPORT
 const express = require("express");
 const multer = require("multer");
 const axios = require("axios");
@@ -120,6 +121,25 @@ router.post("/", upload.single("file"), async (req, res) => {
     } catch (dbErr) {
         console.error("⚠️ Eccezione salvataggio DB:", dbErr.message);
     }
+
+    // ... codice esistente salvataggio DB ...
+    if (error) {
+      console.error("❌ Errore Supabase INSERT:", error.message);
+  } else {
+      console.log("💾 Salvato correttamente su DB per:", clientId);
+      dbData = data[0];
+
+      // --- [NUOVO] WEBHOOK TRIGGER ---
+      // Avvisiamo il cliente che è tutto pronto
+      triggerWebhook(clientId, 'certification.success', {
+          cert_id: dbData.cert_id,
+          hash: hashHex,
+          tx_hash: txHash,
+          block: serializedReceipt.blockNumber,
+          pdf_url: `${req.protocol}://${req.get('host')}/download/${hashHex}` // Link diretto al PDF
+      });
+      // -------------------------------
+  }
 
     // [8] RISPOSTA AL CLIENTE
     return res.json({
