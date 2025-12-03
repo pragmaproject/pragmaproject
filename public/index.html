@@ -17,7 +17,7 @@
         }
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 700px; /* Un po' più largo per far entrare il JSON */
             background: white;
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
@@ -62,7 +62,6 @@
         }
         input:focus, select:focus { border-color: #1e3c72; outline: none; }
         
-        /* Stile API Key Input */
         #apiKeyInput {
             background-color: #f0f7ff;
             border-color: #cce0ff;
@@ -70,7 +69,6 @@
             color: #004085;
         }
 
-        /* Upload Box */
         .upload-box {
             border: 2px dashed #ccc;
             padding: 20px;
@@ -83,7 +81,6 @@
         .upload-box:hover { border-color: #1e3c72; background: #f0f4f8; }
         .file-info { margin-top: 10px; font-size: 0.85rem; color: #666; }
 
-        /* Bottoni */
         .btn {
             width: 100%;
             padding: 14px;
@@ -105,25 +102,38 @@
             color: white;
             text-decoration: none;
             margin-top: 15px;
+            border-radius: 8px;
+            padding: 12px;
+            font-weight: bold;
         }
         .btn-pdf:hover { background: #ff6b81; }
 
         .btn:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* Risultati */
+        /* Risultati e JSON */
         .result {
             margin-top: 25px;
             padding: 20px;
             border-radius: 12px;
             font-size: 0.9rem;
             display: none;
+            word-break: break-all; /* Per evitare che gli hash rompano il layout */
         }
         .success { background: #e3f9e5; border: 1px solid #28a745; color: #0f5132; }
         .error { background: #ffebee; border: 1px solid #ff4757; color: #c62828; }
         
-        code { background: rgba(0,0,0,0.1); padding: 2px 5px; border-radius: 4px; font-family: monospace; }
+        /* Stile JSON raw */
+        pre {
+            background: rgba(0,0,0,0.06);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 15px;
+            font-size: 12px;
+            color: #333;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
         
-        /* Loader */
         .loader { display: none; text-align: center; margin-top: 15px; }
         .spinner {
             width: 30px; height: 30px; border: 3px solid #f3f3f3;
@@ -262,16 +272,23 @@
                 resultBox.className = 'result success';
                 resultBox.innerHTML = `
                     <h3>✅ Certificazione Riuscita!</h3>
-                    <p style="margin-top:10px"><strong>Hash File:</strong> <code>${data.hash.substring(0,20)}...</code></p>
-                    <p><strong>TX Hash:</strong> <a href="https://sepolia.etherscan.io/tx/${data.tx_hash}" target="_blank">Vedi su Etherscan</a></p>
+                    
+                    <p style="margin-top:15px"><strong>Hash File:</strong><br><code>${data.hash}</code></p>
+                    <p style="margin-top:5px"><strong>TX Hash:</strong><br><a href="https://sepolia.etherscan.io/tx/${data.tx_hash}" target="_blank">${data.tx_hash}</a></p>
                     
                     <a href="${API_BASE}/download/${data.hash}" target="_blank" class="btn btn-pdf">
                         📄 Scarica Certificato Ufficiale (PDF)
                     </a>
+
+                    <p style="margin-top:20px; font-weight:bold;">Risposta JSON Completa:</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
                 `;
             } else {
                 resultBox.className = 'result error';
-                resultBox.innerHTML = `<strong>Errore:</strong> ${data.message || data.error || 'Sconosciuto'}`;
+                resultBox.innerHTML = `
+                    <strong>Errore:</strong> ${data.message || data.error || 'Sconosciuto'}
+                    <pre style="background:rgba(255,0,0,0.05); border-color: rgba(255,0,0,0.2)">${JSON.stringify(data, null, 2)}</pre>
+                `;
             }
 
         } catch (err) {
@@ -305,14 +322,21 @@
                 resultBox.innerHTML = `
                     <h3>✅ File Autentico</h3>
                     <p>Questo file è stato notarizzato su Blockchain.</p>
-                    <ul style="margin-top:10px; padding-left:20px">
+                    <ul style="margin-top:10px; padding-left:20px; margin-bottom:15px;">
                         <li><strong>Timestamp:</strong> ${new Date(data.timestamp * 1000).toLocaleString()}</li>
                         <li><strong>Creatore:</strong> ${data.creator}</li>
+                        <li><strong>Fonte:</strong> ${data.source}</li>
                     </ul>
+                    
+                    <p style="font-weight:bold;">Dettagli Tecnici:</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
                 `;
             } else {
                 resultBox.className = 'result error';
-                resultBox.innerHTML = `⚠️ <strong>Non Trovato:</strong> Questo hash non esiste nel registro.`;
+                resultBox.innerHTML = `
+                    ⚠️ <strong>Non Trovato:</strong> Questo hash non esiste nel registro.
+                    <pre style="background:rgba(255,0,0,0.05); border-color: rgba(255,0,0,0.2)">${JSON.stringify(data, null, 2)}</pre>
+                `;
             }
         } catch (err) {
             loader.style.display = 'none';
