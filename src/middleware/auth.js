@@ -1,8 +1,7 @@
 const supabase = require("../lib/supabase");
-const { trackUsage } = require("../lib/usage"); // <--- QUESTA È LA NOVITÀ
+const { trackUsage } = require("../lib/usage");
 
 const requireApiKey = async (req, res, next) => {
-    // 1. Cerca la chiave nell'header
     const apiKey = req.headers['x-api-key'];
 
     if (!apiKey) {
@@ -13,30 +12,58 @@ const requireApiKey = async (req, res, next) => {
     }
 
     try {
-        // 2. Controlla nel DB
-        const { data, error } = await supabase
+        // 1. Recupera la chiave E i dati del cliente collegato (JOIN)
+        // Dobbiamo sapere il piano e il contatore del cliente
+        const { data: keyData, error } = await supabase
             .from('api_keys')
-            .select('client_id, status')
+            .select(`
+                client_id, 
+                status,
+                clients (
+                    id,
+                    plan,
+                    usage_count,
+                    status
+                )
+            `)
             .eq('key_id', apiKey)
             .single();
 
-        if (error || !data) {
+        // 2. Controlli Base (Esistenza e Validità Chiave)
+        if (error || !keyData) {
             return res.status(403).json({ error: "Forbidden", message: "API Key non valida." });
         }
 
-        if (data.status !== 'Attiva') {
-            return res.status(403).json({ error: "Forbidden", message: "API Key sospesa o revocata." });
+        if (keyData.status !== 'Attiva') {
+            return res.status(403).json({ error: "Forbidden", message: "API Key revocata o sospesa." });
         }
 
-        // 3. INIEZIONE DEL CLIENTE
-        req.user = { clientId: data.client_id };
+        // 3. Controlli sul Cliente (Blocco Business)
+        const client = keyData.clients;
 
-        // 4. TRACCIAMENTO UTILIZZO (IL CONTATORE 📊)
-        // Questo è il pezzo che mancava nel tuo vecchio file
-        trackUsage(data.client_id, req.path, req.method, req.ip);
+        if (client.status !== 'Attivo') {
+            return res.status(403).json({ error: "Forbidden", message: "Account cliente sospeso." });
+        }
 
-        console.log(`🔐 Accesso autorizzato per: ${data.client_id}`);
-        next(); // Passa alla rotta successiva
+        // --- IL BLOCCO DEI LIMITI (QUOTA CHECK) ---
+        const USAGE_LIMIT = 1000; // Limite per il piano Starter
+
+        if (client.plan === 'Starter' && client.usage_count >= USAGE_LIMIT) {
+            return res.status(402).json({ 
+                error: "Payment Required", 
+                message: `Hai raggiunto il limite del piano Starter (${USAGE_LIMIT} richieste). Contatta sales@pragma.io per passare a Enterprise.` 
+            });
+        }
+        // -------------------------------------------
+
+        // 4. Tutto OK: Iniettiamo il cliente e tracciamo l'uso
+        req.user = { clientId: client.id, plan: client.plan };
+
+        // Incrementiamo il contatore (Fire & Forget)
+        trackUsage(client.id, req.path, req.method, req.ip);
+
+        console.log(`🔐 Accesso OK: ${client.id} | Piano: ${client.plan} | Uso: ${client.usage_count}`);
+        next();
 
     } catch (err) {
         console.error("Auth Error:", err);
