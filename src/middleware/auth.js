@@ -5,15 +5,11 @@ const requireApiKey = async (req, res, next) => {
     const apiKey = req.headers['x-api-key'];
 
     if (!apiKey) {
-        return res.status(401).json({ 
-            error: "Unauthorized", 
-            message: "API Key mancante. Inserisci l'header 'x-api-key'." 
-        });
+        return res.status(401).json({ error: "Unauthorized", message: "API Key mancante." });
     }
 
     try {
-        // 1. Recupera la chiave E i dati del cliente collegato (JOIN)
-        // Dobbiamo sapere il piano e il contatore del cliente
+        // 1. Recupera chiave e cliente
         const { data: keyData, error } = await supabase
             .from('api_keys')
             .select(`
@@ -29,44 +25,48 @@ const requireApiKey = async (req, res, next) => {
             .eq('key_id', apiKey)
             .single();
 
-        // 2. Controlli Base (Esistenza e Validità Chiave)
         if (error || !keyData) {
+            console.error("Auth DB Error:", error); // LOG ERRORE DB
             return res.status(403).json({ error: "Forbidden", message: "API Key non valida." });
         }
 
         if (keyData.status !== 'Attiva') {
-            return res.status(403).json({ error: "Forbidden", message: "API Key revocata o sospesa." });
+            return res.status(403).json({ error: "Forbidden", message: "API Key sospesa." });
         }
 
-        // 3. Controlli sul Cliente (Blocco Business)
         const client = keyData.clients;
 
-        if (client.status !== 'Attivo') {
-            return res.status(403).json({ error: "Forbidden", message: "Account cliente sospeso." });
-        }
+        // --- 🔍 DEBUG LOG (GUARDARE QUI!) ---
+        console.log("------------------------------------------------");
+        console.log("👤 CLIENTE IDENTIFICATO:", client.id);
+        console.log("📊 PIANO:", `'${client.plan}'`); // Gli apici mostrano se ci sono spazi
+        console.log("🔢 CONTATORE:", client.usage_count, "(Tipo:", typeof client.usage_count, ")");
+        console.log("------------------------------------------------");
 
-        // --- IL BLOCCO DEI LIMITI (QUOTA CHECK) ---
-        const USAGE_LIMIT = 1000; // Limite per il piano Starter
-
-        if (client.plan === 'Starter' && client.usage_count >= USAGE_LIMIT) {
+        // --- BLOCCO LIMITI ---
+        const USAGE_LIMIT = 1000;
+        
+        // Normalizziamo il piano (togliamo spazi e maiuscole per sicurezza)
+        const planNormalized = (client.plan || "").trim().toLowerCase();
+        
+        // Controllo robusto: Se è 'starter' E (il contatore esiste E supera il limite)
+        if (planNormalized === 'starter' && client.usage_count >= USAGE_LIMIT) {
+            
+            console.log("🛑 BLOCCO SCATTATO! Limite raggiunto.");
+            
             return res.status(402).json({ 
                 error: "Payment Required", 
-                message: `Hai raggiunto il limite del piano Starter (${USAGE_LIMIT} richieste). Contatta sales@pragma.io per passare a Enterprise.` 
+                message: `Hai raggiunto il limite del piano Starter (${USAGE_LIMIT} richieste). Contatta sales@pragma.io.` 
             });
         }
-        // -------------------------------------------
 
-        // 4. Tutto OK: Iniettiamo il cliente e tracciamo l'uso
+        // 4. Tutto OK
         req.user = { clientId: client.id, plan: client.plan };
-
-        // Incrementiamo il contatore (Fire & Forget)
         trackUsage(client.id, req.path, req.method, req.ip);
-
-        console.log(`🔐 Accesso OK: ${client.id} | Piano: ${client.plan} | Uso: ${client.usage_count}`);
         next();
 
     } catch (err) {
-        console.error("Auth Error:", err);
+        console.error("Auth Crash:", err);
         return res.status(500).json({ error: "Internal Server Error" });
     }
 };
