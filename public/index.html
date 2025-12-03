@@ -17,7 +17,7 @@
         }
         .container {
             width: 100%;
-            max-width: 700px; /* Un po' più largo per far entrare il JSON */
+            max-width: 700px;
             background: white;
             border-radius: 16px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
@@ -69,6 +69,30 @@
             color: #004085;
         }
 
+        /* --- NUOVO: BOX STATO ACCOUNT --- */
+        #accountStatus {
+            background: #f1f8ff;
+            border: 1px solid #cce5ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 25px;
+            display: none; /* Nascosto finché non carichiamo i dati */
+        }
+        .status-row {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+        }
+        .plan-badge {
+            background: #004085; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; text-transform: uppercase; font-weight: bold;
+        }
+        .usage-bar {
+            height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; margin-top: 5px;
+        }
+        .usage-fill {
+            height: 100%; background: #28a745; width: 0%; transition: width 0.5s ease;
+        }
+        .usage-text { font-size: 0.85rem; color: #666; }
+        /* -------------------------------- */
+
         .upload-box {
             border: 2px dashed #ccc;
             padding: 20px;
@@ -94,44 +118,23 @@
         .btn-primary { background: #1e3c72; color: white; }
         .btn-primary:hover { background: #162c55; }
         
-        /* Bottone PDF */
         .btn-pdf {
-            display: block;
-            text-align: center;
-            background: #ff4757;
-            color: white;
-            text-decoration: none;
-            margin-top: 15px;
-            border-radius: 8px;
-            padding: 12px;
-            font-weight: bold;
+            display: block; text-align: center; background: #ff4757; color: white;
+            text-decoration: none; margin-top: 15px; border-radius: 8px; padding: 12px; font-weight: bold;
         }
         .btn-pdf:hover { background: #ff6b81; }
 
         .btn:disabled { background: #ccc; cursor: not-allowed; }
 
-        /* Risultati e JSON */
         .result {
-            margin-top: 25px;
-            padding: 20px;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            display: none;
-            word-break: break-all; /* Per evitare che gli hash rompano il layout */
+            margin-top: 25px; padding: 20px; border-radius: 12px; font-size: 0.9rem; display: none; word-break: break-all;
         }
         .success { background: #e3f9e5; border: 1px solid #28a745; color: #0f5132; }
         .error { background: #ffebee; border: 1px solid #ff4757; color: #c62828; }
         
-        /* Stile JSON raw */
         pre {
-            background: rgba(0,0,0,0.06);
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin-top: 15px;
-            font-size: 12px;
-            color: #333;
-            border: 1px solid rgba(0,0,0,0.1);
+            background: rgba(0,0,0,0.06); padding: 15px; border-radius: 8px; overflow-x: auto;
+            margin-top: 15px; font-size: 12px; color: #333; border: 1px solid rgba(0,0,0,0.1);
         }
         
         .loader { display: none; text-align: center; margin-top: 15px; }
@@ -160,10 +163,28 @@
     <div class="content">
         
         <div id="certifyTab" class="tab-content active">
+            
             <form id="certifyForm">
                 <div class="form-group">
-                    <label>🔑 API Key (Richiesta)</label>
-                    <input type="text" id="apiKeyInput" placeholder="Incolla qui la tua API Key (es. pk_live_...)" required>
+                    <label>🔑 API Key</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="apiKeyInput" placeholder="Inserisci API Key..." onblur="checkUsage()">
+                        <button type="button" onclick="checkUsage()" style="width: auto; padding: 10px 15px; font-size: 0.9rem; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer;">↻ Check</button>
+                    </div>
+                </div>
+
+                <div id="accountStatus">
+                    <div class="status-row">
+                        <strong>Piano Attivo:</strong>
+                        <span id="planName" class="plan-badge">Loading...</span>
+                    </div>
+                    <div class="status-row">
+                        <span class="usage-text">Utilizzo API:</span>
+                        <span id="usageText" class="usage-text">0 / 0</span>
+                    </div>
+                    <div class="usage-bar">
+                        <div id="usageFill" class="usage-fill"></div>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -218,7 +239,6 @@
     function switchTab(tab) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        
         event.target.classList.add('active');
         document.getElementById(tab + 'Tab').classList.add('active');
     }
@@ -232,6 +252,54 @@
             document.getElementById('fileInfo').innerText = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
         }
     });
+
+    // --- NUOVA FUNZIONE: CONTROLLA CONSUMI ---
+    async function checkUsage() {
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const statusBox = document.getElementById('accountStatus');
+        
+        if (!apiKey) {
+            statusBox.style.display = 'none';
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/usage`, {
+                headers: { 'x-api-key': apiKey }
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                statusBox.style.display = 'block';
+                
+                document.getElementById('planName').innerText = data.plan;
+                
+                // Calcolo Percentuale
+                let percentage = 0;
+                let limitText = "Illimitato";
+                
+                if (data.limit !== 'Unlimited') {
+                    percentage = (data.total_requests / data.limit) * 100;
+                    if (percentage > 100) percentage = 100;
+                    limitText = data.limit;
+                }
+
+                document.getElementById('usageText').innerText = `${data.total_requests} / ${limitText}`;
+                document.getElementById('usageFill').style.width = `${percentage}%`;
+                
+                // Colore barra: Verde (ok), Giallo (attenzione), Rosso (pieno)
+                const fill = document.getElementById('usageFill');
+                if (percentage > 90) fill.style.background = '#dc3545'; // Rosso
+                else if (percentage > 70) fill.style.background = '#ffc107'; // Giallo
+                else fill.style.background = '#28a745'; // Verde
+
+            } else {
+                statusBox.style.display = 'none';
+            }
+        } catch (err) {
+            console.error("Errore check usage:", err);
+        }
+    }
 
     // LOGICA CERTIFICAZIONE
     document.getElementById('certifyForm').addEventListener('submit', async (e) => {
@@ -267,6 +335,9 @@
             resultBox.style.display = 'block';
             loader.style.display = 'none';
             btn.disabled = false;
+
+            // Aggiorna subito i consumi dopo l'operazione!
+            checkUsage();
 
             if (res.ok) {
                 resultBox.className = 'result success';
@@ -327,7 +398,6 @@
                         <li><strong>Creatore:</strong> ${data.creator}</li>
                         <li><strong>Fonte:</strong> ${data.source}</li>
                     </ul>
-                    
                     <p style="font-weight:bold;">Dettagli Tecnici:</p>
                     <pre>${JSON.stringify(data, null, 2)}</pre>
                 `;
