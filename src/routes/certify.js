@@ -1,4 +1,3 @@
-const { triggerWebhook } = require("../lib/webhooks"); // <--- NUOVO IMPORT
 const express = require("express");
 const multer = require("multer");
 const axios = require("axios");
@@ -7,6 +6,7 @@ const { uploadBufferToIPFS } = require("../lib/storage.js");
 const { certifyOnChain } = require("../lib/blockchain.js");
 const { serializeBigInt } = require("../lib/utils.js");
 const supabase = require("../lib/supabase.js");
+const { triggerWebhook } = require("../lib/webhooks.js"); // Assicurati di aver creato questo file prima!
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -16,17 +16,15 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.post("/", upload.single("file"), async (req, res) => {
   try {
     // [1] SICUREZZA ENTERPRISE
-    // Recuperiamo il cliente direttamente dall'oggetto 'req.user'
-    // Questo oggetto è stato popolato dal middleware 'requireApiKey' in auth.js
+    // Recuperiamo il cliente dal middleware (req.user popolato da auth.js)
     const clientId = req.user ? req.user.clientId : null;
 
     if (!clientId) {
-      // Se siamo qui ma non c'è clientId, qualcosa è andato storto nel server.js
       console.error("⛔ ERRORE CRITICO: Richiesta arrivata a /certify senza auth middleware!");
-      return res.status(500).json({ error: "Errore interno di sicurezza." });
+      return res.status(500).json({ error: "Errore interno di sicurezza: Cliente non identificato." });
     }
 
-    console.log(`🔐 Certificazione avviata per Cliente verificato: ${clientId}`);
+    console.log(`🔐 Certificazione avviata per Cliente: ${clientId}`);
 
     // [2] GESTIONE FILE (Buffer o URL)
     let buffer;
@@ -48,24 +46,22 @@ router.post("/", upload.single("file"), async (req, res) => {
     if (process.env.USE_IPFS === "true") {
       try {
         ipfsCid = await uploadBufferToIPFS(buffer);
-      } catch (err) {
-        console.warn("⚠️ IPFS Error:", err.message);
+      } catch (ipfsErr) {
+        console.warn("⚠️ IPFS Error:", ipfsErr.message);
       }
     }
 
     // [5] PREPARAZIONE DATI BLOCKCHAIN
     const declared = (req.body.declared_type || "human").toLowerCase();
     const ctype = declared === "ai" ? 1 : declared === "mixed" ? 2 : 0;
-    
-    // Il wallet che firma la transazione (può essere quello del cliente o quello di sistema)
     const creator = req.body.creator_wallet || "0x0000000000000000000000000000000000000000";
 
-    // Verifica preliminare (opzionale: controlla se esiste già on-chain)
+    // Verifica preliminare (opzionale)
     const { verifyOnChain } = require("../lib/blockchain.js");
     try {
       const existingCert = await verifyOnChain(hashHex);
       if (existingCert && existingCert.timestamp && existingCert.timestamp.toString() !== "0") {
-        return res.status(409).json({ // 409 Conflict
+        return res.status(409).json({ 
             error: "Contenuto già certificato", 
             hash: hashHex,
             message: "Questo file è già presente sulla blockchain."
@@ -82,7 +78,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     
     console.log("✅ Confermata su Blockchain! TX:", txHash);
 
-    // [7] SALVATAGGIO DATABASE (Sicuro e Collegato)
+    // [7] SALVATAGGIO DATABASE + WEBHOOK
     let dbData = null;
     try {
         const fileMetadata = {
@@ -91,12 +87,13 @@ router.post("/", upload.single("file"), async (req, res) => {
             sizeBytes: buffer.length
         };
 
+        // NOTA BENE: Qui destrutturiamo 'error' per usarlo nell'if subito sotto
         const { data, error } = await supabase
             .from('certifications')
             .insert([
                 {
                     cert_id: `cert_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-                    client_id: clientId, // <--- QUI USIAMO L'ID SICURO
+                    client_id: clientId,
                     content_hash: hashHex,
                     tx_hash: txHash,
                     block_number: serializedReceipt.blockNumber,
@@ -112,46 +109,49 @@ router.post("/", upload.single("file"), async (req, res) => {
 
         if (error) {
             console.error("❌ Errore Supabase INSERT:", error.message);
-            // Non blocchiamo, perché la blockchain ha avuto successo
         } else {
             console.log("💾 Salvato correttamente su DB per:", clientId);
             dbData = data[0];
+
+            // --- WEBHOOK TRIGGER ---
+            // Ora 'dbData' esiste sicuramente
+            // Costruiamo l'URL per il download PDF
+            const host = req.get('host');
+            const protocol = req.protocol;
+            const pdfUrl = `${protocol}://${host}/download/${hashHex}`;
+
+            // Chiamata sicura al webhook (senza await per non bloccare)
+            try {
+                triggerWebhook(clientId, 'certification.success', {
+                    cert_id: dbData.cert_id,
+                    hash: hashHex,
+                    tx_hash: txHash,
+                    block: serializedReceipt.blockNumber,
+                    pdf_url: pdfUrl
+                });
+            } catch (hookErr) {
+                console.error("⚠️ Errore nel trigger Webhook:", hookErr.message);
+            }
         }
 
     } catch (dbErr) {
-        console.error("⚠️ Eccezione salvataggio DB:", dbErr.message);
+        // Qui catturiamo errori generici del blocco DB
+        console.error("⚠️ Eccezione blocco DB:", dbErr.message);
     }
-
-    // ... codice esistente salvataggio DB ...
-    if (error) {
-      console.error("❌ Errore Supabase INSERT:", error.message);
-  } else {
-      console.log("💾 Salvato correttamente su DB per:", clientId);
-      dbData = data[0];
-
-      // --- [NUOVO] WEBHOOK TRIGGER ---
-      // Avvisiamo il cliente che è tutto pronto
-      triggerWebhook(clientId, 'certification.success', {
-          cert_id: dbData.cert_id,
-          hash: hashHex,
-          tx_hash: txHash,
-          block: serializedReceipt.blockNumber,
-          pdf_url: `${req.protocol}://${req.get('host')}/download/${hashHex}` // Link diretto al PDF
-      });
-      // -------------------------------
-  }
 
     // [8] RISPOSTA AL CLIENTE
     return res.json({
       success: true,
       hash: hashHex,
       tx_hash: txHash,
-      data: dbData, // Restituisce i dettagli salvati
-      usage_billed_to: clientId // Conferma chi sta pagando
+      data: dbData, 
+      usage_billed_to: clientId
     });
 
   } catch (err) {
+    // Questo è il blocco finale che catturava l'errore "error is not defined"
     console.error("Certify Error:", err);
+    // Usiamo 'err.message' perché la variabile nel catch si chiama 'err'
     res.status(500).json({ error: err.message });
   }
 });
