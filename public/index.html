@@ -69,7 +69,7 @@
             color: #004085;
         }
 
-        /* --- NUOVO: BOX STATO ACCOUNT --- */
+        /* --- BOX STATO ACCOUNT --- */
         #accountStatus {
             background: #f1f8ff;
             border: 1px solid #cce5ff;
@@ -233,11 +233,18 @@
 <script>
     const API_BASE = window.location.origin;
 
-    // --- FUNZIONE GLOBALE DI INIZIALIZZAZIONE ---
+    // --- FUNZIONE UTILITY PER IL LABELING AI/UMANO ---
+    function getContentTypeLabel(contentType) {
+        switch (contentType) {
+            case 0: return 'Umano (Dichiarato)';
+            case 1: return 'AI Generato (Dichiarato)';
+            case 2: return 'Misto (Dichiarato)';
+            default: return 'Non Specificato';
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        // Imposta il link allo Swagger all'avvio
         document.getElementById('swaggerLink').href = `${API_BASE}/api-docs`;
-        // Inizializza il check all'apertura se c'è una chiave memorizzata
         const savedKey = localStorage.getItem('pragma_api_key');
         if (savedKey) {
             document.getElementById('apiKeyInput').value = savedKey;
@@ -261,7 +268,6 @@
         }
     });
 
-    // --- FUNZIONE: CONTROLLA CONSUMI (MODIFICATA) ---
     async function checkUsage() {
         const apiKey = document.getElementById('apiKeyInput').value.trim();
         const statusBox = document.getElementById('accountStatus');
@@ -279,7 +285,7 @@
             if (res.ok) {
                 const data = await res.json();
                 statusBox.style.display = 'block';
-                localStorage.setItem('pragma_api_key', apiKey); // Salva la chiave per la prossima volta
+                localStorage.setItem('pragma_api_key', apiKey);
                 
                 document.getElementById('planName').innerText = data.plan;
                 
@@ -302,7 +308,6 @@
 
             } else {
                 statusBox.style.display = 'none';
-                // Se l'API Key è scaduta, cancellala
                 localStorage.removeItem('pragma_api_key');
             }
         } catch (err) {
@@ -345,7 +350,6 @@
             loader.style.display = 'none';
             btn.disabled = false;
 
-            // Aggiorna subito i consumi dopo l'operazione!
             checkUsage();
 
             if (res.ok) {
@@ -380,7 +384,7 @@
         }
     });
 
-    // LOGICA VERIFICA
+    // LOGICA VERIFICA (FIX APPLICATO QUI)
     document.getElementById('verifyForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const hash = document.getElementById('hashInput').value.trim();
@@ -398,9 +402,13 @@
             resultBox.style.display = 'block';
 
             if (res.ok) {
+                // 1. Ottiene l'etichetta Umano/AI/Misto
+                const contentTypeLabel = getContentTypeLabel(data.contentType); 
+
                 resultBox.className = 'result success';
                 resultBox.innerHTML = `
                     <h3>✅ File Autentico</h3>
+                    <h4 style="margin-top:10px; color:#1e3c72;">Etichetta Blockchain: <strong>${contentTypeLabel}</strong></h4>
                     <p>Questo file è stato notarizzato su Blockchain.</p>
                     <ul style="margin-top:10px; padding-left:20px; margin-bottom:15px;">
                         <li><strong>Timestamp:</strong> ${new Date(data.timestamp * 1000).toLocaleString()}</li>
