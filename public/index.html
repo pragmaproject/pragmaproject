@@ -76,7 +76,7 @@
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 25px;
-            display: none; /* Nascosto finché non carichiamo i dati */
+            display: none;
         }
         .status-row {
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
@@ -132,17 +132,10 @@
         .success { background: #e3f9e5; border: 1px solid #28a745; color: #0f5132; }
         .error { background: #ffebee; border: 1px solid #ff4757; color: #c62828; }
         
-        pre {
-            background: rgba(0,0,0,0.06); padding: 15px; border-radius: 8px; overflow-x: auto;
-            margin-top: 15px; font-size: 12px; color: #333; border: 1px solid rgba(0,0,0,0.1);
-        }
+        pre { background: rgba(0,0,0,0.06); padding: 15px; border-radius: 8px; overflow-x: auto; margin-top: 15px; font-size: 12px; color: #333; border: 1px solid rgba(0,0,0,0.1); }
         
         .loader { display: none; text-align: center; margin-top: 15px; }
-        .spinner {
-            width: 30px; height: 30px; border: 3px solid #f3f3f3;
-            border-top: 3px solid #1e3c72; border-radius: 50%;
-            animation: spin 1s linear infinite; margin: 0 auto 10px;
-        }
+        .spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #1e3c72; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     </style>
@@ -153,6 +146,12 @@
     <div class="header">
         <h1>🛡️ Pragma Enterprise</h1>
         <p>Blockchain Notarization & Certification API</p>
+        
+        <p style="margin-top: 15px;">
+            <a id="swaggerLink" href="#" target="_blank" style="color: #1e3c72; text-decoration: underline; font-weight: 600; font-size: 0.85rem;">
+                📄 Vai alla Documentazione Tecnica (Swagger)
+            </a>
+        </p>
     </div>
 
     <div class="tabs">
@@ -163,12 +162,11 @@
     <div class="content">
         
         <div id="certifyTab" class="tab-content active">
-            
             <form id="certifyForm">
                 <div class="form-group">
                     <label>🔑 API Key</label>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="apiKeyInput" placeholder="Inserisci API Key..." onblur="checkUsage()">
+                        <input type="text" id="apiKeyInput" placeholder="Incolla qui la tua API Key (es. pk_live_...)" required onblur="checkUsage()">
                         <button type="button" onclick="checkUsage()" style="width: auto; padding: 10px 15px; font-size: 0.9rem; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer;">↻ Check</button>
                     </div>
                 </div>
@@ -235,7 +233,18 @@
 <script>
     const API_BASE = window.location.origin;
 
-    // Gestione Tabs
+    // --- FUNZIONE GLOBALE DI INIZIALIZZAZIONE ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Imposta il link allo Swagger all'avvio
+        document.getElementById('swaggerLink').href = `${API_BASE}/api-docs`;
+        // Inizializza il check all'apertura se c'è una chiave memorizzata
+        const savedKey = localStorage.getItem('pragma_api_key');
+        if (savedKey) {
+            document.getElementById('apiKeyInput').value = savedKey;
+            checkUsage();
+        }
+    });
+
     function switchTab(tab) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -243,7 +252,6 @@
         document.getElementById(tab + 'Tab').classList.add('active');
     }
 
-    // Gestione File
     const fileInput = document.getElementById('fileInput');
     fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
@@ -253,7 +261,7 @@
         }
     });
 
-    // --- NUOVA FUNZIONE: CONTROLLA CONSUMI ---
+    // --- FUNZIONE: CONTROLLA CONSUMI (MODIFICATA) ---
     async function checkUsage() {
         const apiKey = document.getElementById('apiKeyInput').value.trim();
         const statusBox = document.getElementById('accountStatus');
@@ -271,10 +279,10 @@
             if (res.ok) {
                 const data = await res.json();
                 statusBox.style.display = 'block';
+                localStorage.setItem('pragma_api_key', apiKey); // Salva la chiave per la prossima volta
                 
                 document.getElementById('planName').innerText = data.plan;
                 
-                // Calcolo Percentuale
                 let percentage = 0;
                 let limitText = "Illimitato";
                 
@@ -287,17 +295,19 @@
                 document.getElementById('usageText').innerText = `${data.total_requests} / ${limitText}`;
                 document.getElementById('usageFill').style.width = `${percentage}%`;
                 
-                // Colore barra: Verde (ok), Giallo (attenzione), Rosso (pieno)
                 const fill = document.getElementById('usageFill');
-                if (percentage > 90) fill.style.background = '#dc3545'; // Rosso
-                else if (percentage > 70) fill.style.background = '#ffc107'; // Giallo
-                else fill.style.background = '#28a745'; // Verde
+                if (percentage > 90) fill.style.background = '#dc3545';
+                else if (percentage > 70) fill.style.background = '#ffc107';
+                else fill.style.background = '#28a745';
 
             } else {
                 statusBox.style.display = 'none';
+                // Se l'API Key è scaduta, cancellala
+                localStorage.removeItem('pragma_api_key');
             }
         } catch (err) {
             console.error("Errore check usage:", err);
+            statusBox.style.display = 'none';
         }
     }
 
@@ -315,7 +325,6 @@
         if (!file) return alert("Seleziona un file!");
         if (!apiKey) return alert("API Key mancante!");
 
-        // UI Updates
         btn.disabled = true;
         loader.style.display = 'block';
         resultBox.style.display = 'none';
