@@ -5,7 +5,7 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'Pragma Enterprise API',
-      version: '2.6.0', // Updated for Self-Service Onboarding
+      version: '2.7.0', // Updated for Strict Pay-to-Play
       description: `
 ### 🛡️ Trust Infrastructure for the AI Era
 Pragma is the middleware API for notarizing digital assets on a Proprietary Blockchain.
@@ -19,7 +19,8 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
 **Billing Rules:**
 * 🟡 **Write (POST /certify):** Consumes **1 Credit**.
 * 🟢 **Read (GET /usage, /verify, /history):** Free (**0 Credits**).
-* **Starter Plan:** Limited to 1000 requests. Upgrade via \`/billing\`.
+* **Starter Plan:** Limited to 1000 requests.
+* **Enterprise Plan:** Unlimited. Requires active subscription. **Keys are inactive until payment is completed.**
 
 ---
 **Quick Start:**
@@ -73,7 +74,7 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
             success: { type: 'boolean', example: true },
             apiKey: { type: 'string', example: 'pk_live_a1b2c3d4...' },
             clientId: { type: 'string', example: 'cust_xyz123' },
-            redirectUrl: { type: 'string', nullable: true, description: 'Stripe Checkout URL (only for Enterprise plan)' }
+            redirectUrl: { type: 'string', nullable: true, description: 'Stripe Checkout URL. If present, payment is required to activate the key.' }
           }
         },
         // --- BILLING & USAGE ---
@@ -140,6 +141,20 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
             error: { type: 'string', example: 'Unauthorized' },
             message: { type: 'string', example: 'Missing or invalid API Key.' }
           }
+        },
+        ForbiddenResponse: {
+          type: 'object',
+          properties: {
+            error: { type: 'string', example: 'Forbidden' },
+            message: { type: 'string', example: 'Account not active. Complete payment to enable this API Key.' }
+          }
+        },
+        PaymentRequiredResponse: {
+          type: 'object',
+          properties: {
+            error: { type: 'string', example: 'Payment Required' },
+            message: { type: 'string', example: 'Starter plan limit reached (1000 requests). Please upgrade.' }
+          }
         }
       }
     },
@@ -151,7 +166,7 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
       '/onboarding/register': {
         post: {
           summary: 'Create new Account (Public)',
-          description: 'Generates a new Client ID and API Key instantly. No auth required.',
+          description: 'Generates a new Client ID and API Key. If Enterprise plan is selected, key will remain inactive until payment.',
           tags: ['Onboarding'],
           security: [], // Public
           requestBody: {
@@ -174,7 +189,8 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
           security: [{ ApiKeyAuth: [] }],
           responses: {
             200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/UsageResponse' } } } },
-            401: { description: 'Unauthorized' }
+            401: { description: 'Unauthorized' },
+            403: { description: 'Forbidden (Account Inactive)', content: { 'application/json': { schema: { $ref: '#/components/schemas/ForbiddenResponse' } } } }
           }
         }
       },
@@ -186,7 +202,8 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
           requestBody: { content: { 'application/json': { schema: { type: 'object' } } } },
           responses: {
             200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/CheckoutSessionResponse' } } } },
-            401: { description: 'Unauthorized' }
+            401: { description: 'Unauthorized' },
+            403: { description: 'Forbidden' }
           }
         }
       },
@@ -223,7 +240,8 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
           },
           responses: {
             200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/CertificationResponse' } } } },
-            402: { description: 'Payment Required' },
+            402: { description: 'Payment Required', content: { 'application/json': { schema: { $ref: '#/components/schemas/PaymentRequiredResponse' } } } },
+            403: { description: 'Forbidden (Inactive)', content: { 'application/json': { schema: { $ref: '#/components/schemas/ForbiddenResponse' } } } },
             409: { description: 'Conflict' },
             401: { description: 'Unauthorized' }
           }
@@ -260,7 +278,8 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
           security: [{ ApiKeyAuth: [] }],
           parameters: [ { in: 'path', name: 'clientId', schema: { type: 'string' }, required: true } ],
           responses: {
-            200: { description: 'List of certifications' }
+            200: { description: 'List of certifications' },
+            403: { description: 'Forbidden (Inactive)' }
           }
         }
       }
