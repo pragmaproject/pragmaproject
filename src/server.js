@@ -4,63 +4,77 @@ const path = require("path");
 
 // --- DOCUMENTAZIONE API (Swagger) ---
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./swagger'); // Assicurati di aver creato src/swagger.js
+const swaggerSpecs = require('./swagger'); 
 
 // --- SICUREZZA (Middleware) ---
-// Questo file deve esistere in src/middleware/auth.js
 const requireApiKey = require("./middleware/auth");
 
 const app = express();
 
 // =========================================================
-// 1. CONFIGURAZIONE GLOBALE
-// =========================================================
-app.use(cors()); // Abilita chiamate da qualsiasi browser (CORS)
-app.use(express.json()); // Permette di leggere i JSON nel body
-app.use(express.urlencoded({ extended: true })); // Permette di leggere i form data
-
-// =========================================================
-// 2. FRONTEND (Dashboard & Documentazione)
+// 1. CONFIGURAZIONE MIDDLEWARE (Ordine CRUCIALE)
 // =========================================================
 
-// Serve la tua Dashboard HTML (index.html) dalla cartella 'public'
+// A. Abilita CORS per il frontend
+app.use(cors()); 
+
+// B. STRIPE WEBHOOK (Deve stare PRIMA di express.json)
+// Stripe ha bisogno del body "grezzo" (raw) per verificare la firma di sicurezza.
+// Se mettessimo express.json() prima, corromperebbe i dati del webhook.
+app.use("/webhooks-stripe", require("./routes/webhooks-stripe"));
+
+// C. BODY PARSERS (Per tutto il resto del sito)
+// Ora possiamo convertire i body in JSON per le altre rotte
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
+
+// =========================================================
+// 2. FRONTEND & DOCS
+// =========================================================
+
+// Serve la Dashboard HTML
 app.use(express.static(path.join(__dirname, "../public")));
 
-// Serve la Documentazione Swagger per gli investitori
-// Vai su: http://localhost:3000/api-docs
+// Serve la Documentazione Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
 
 // =========================================================
-// 3. ROTTE PUBBLICHE (Senza Password)
+// 3. ROTTE PUBBLICHE (Senza API Key)
 // =========================================================
 
-// Health Check (per vedere se il server è vivo)
+// Health Check
 app.get("/api-status", (req, res) => {
     res.json({ 
         status: "online", 
-        version: "1.0.0", 
+        version: "2.4.0", 
         environment: process.env.NODE_ENV || "development",
         message: "Pragma Enterprise API is running 🚀" 
     });
 });
 
-// Verifica: Deve essere pubblica per permettere a chiunque di controllare un certificato
-// File: src/routes/verify.js
+// Verifica Hash (Chiunque deve poter verificare)
 app.use("/verify", require("./routes/verify"));
 
+// Download PDF (Link pubblico per facilitare la condivisione)
+app.use("/download", require("./routes/download"));
+
 
 // =========================================================
-// 4. ROTTE PROTETTE (🔐 Serve API Key)
+// 4. ROTTE PROTETTE (🔐 Richiedono API Key)
 // =========================================================
 
-// Certificazione: Richiede 'x-api-key' nell'header
-// File: src/routes/certify.js
+// Certificazione (Scrittura su Blockchain - A pagamento)
 app.use("/certify", requireApiKey, require("./routes/certify"));
 
-// Storico: Richiede 'x-api-key' nell'header
-// File: src/routes/history.js
+// Storico Certificazioni
 app.use("/history", requireApiKey, require("./routes/history"));
+
+// Controllo Consumi (Billing)
+app.use("/usage", requireApiKey, require("./routes/usage"));
+
+// Pagamenti Stripe (Creazione Link)
+app.use("/billing", requireApiKey, require("./routes/billing"));
 
 
 // =========================================================
@@ -68,32 +82,12 @@ app.use("/history", requireApiKey, require("./routes/history"));
 // =========================================================
 app.use((err, req, res, next) => {
     console.error("🔥 Errore Server Non Gestito:", err.stack);
-    
-    // Risposta standardizzata in caso di crash
     res.status(500).json({ 
         error: "Internal Server Error", 
         message: "Si è verificato un errore imprevisto nel server.",
         details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
-
-// ... altre rotte ...
-app.use("/certify", requireApiKey, require("./routes/certify"));
-app.use("/history", requireApiKey, require("./routes/history"));
-app.use("/history", requireApiKey, require("./routes/history"));
-
-// NUOVA ROTTA PDF (Pubblica, così si può scaricare facilmente)
-app.use("/download", require("./routes/download")); 
-
-// ... gestione errori ...
-
-
-// ... gli altri require ...
-// AGGIUNGI QUESTA RIGA DOVE CI SONO GLI ALTRI APP.USE:
-
-// Billing: Creazione link di pagamento
-// Richiede: x-api-key nell'header
-app.use("/billing", requireApiKey, require("./routes/billing"));
 
 // =========================================================
 // 6. AVVIO DEL SERVER
@@ -105,14 +99,10 @@ app.listen(PORT, () => {
     🚀 PRAGMA API SERVER AVVIATO
     ==================================================
     📡 API URL:      http://localhost:${PORT}
-    📄 Docs (Swagger): http://localhost:${PORT}/api-docs
+    📄 Docs:         http://localhost:${PORT}/api-docs
     🖥️  Dashboard:    http://localhost:${PORT}
-    🛡️  Sicurezza:    Attiva su /certify e /history
+    💳 Stripe:       Webhook attivo su /webhooks-stripe
     ==================================================
     `);
 });
-
-
-// NUOVA ROTTA CONSUMI
-app.use("/usage", requireApiKey, require("./routes/usage"));
 

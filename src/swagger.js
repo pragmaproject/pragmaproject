@@ -5,27 +5,27 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'Pragma Enterprise API',
-      version: '2.4.0', // Updated for Stripe Integration
+      version: '2.5.0', // Updated for Stripe & Billing Complete Integration
       description: `
 ### 🛡️ Trust Infrastructure for the AI Era
-Pragma is the standard API for notarizing and certifying digital assets on a Proprietary Blockchain.
+Pragma is the middleware API for notarizing digital assets on a Proprietary Blockchain.
 
-**Enterprise Features:**
-* **Smart Contract Registry:** Immutable registry on Blockchain (Sepolia).
+**Key Features:**
+* **Immutable Registry:** Smart Contract \`ContentCert\` on Sepolia.
 * **AI Labeling:** On-chain classification (Human/AI/Mixed).
-* **Smart Billing:** Credit system with Stripe integration.
-* **Webhooks & PDF:** Real-time notifications and official certificates.
+* **Smart Billing:** Automated credits & Stripe payments.
+* **Legal Tech:** Instant PDF Certificates with Etherscan QR Codes.
 
 **Billing Rules:**
 * 🟡 **Write (POST /certify):** Consumes **1 Credit**.
-* 🟢 **Read (GET /usage, /verify):** Free (**0 Credits**).
-* **Starter Plan:** Hard limit at 1000 Certifications. Use \`/billing\` to upgrade.
+* 🟢 **Read (GET /usage, /verify, /history):** Free (**0 Credits**).
+* **Starter Plan:** Limited to 1000 requests. Upgrade via \`/billing\`.
 
 ---
 **Quick Start:**
-1. Click **Authorize** and enter your API Key.
-2. Check your plan on \`/usage\`.
-3. If you need more credits, create a session via \`/billing/create-checkout-session\`.
+1. Click **Authorize** and paste your API Key.
+2. Check your credits on \`/usage\`.
+3. If you need to upgrade, call \`/billing/create-checkout-session\`.
       `,
       contact: {
         name: 'Pragma Developer Support',
@@ -33,18 +33,18 @@ Pragma is the standard API for notarizing and certifying digital assets on a Pro
         url: 'https://pragma.io'
       },
       license: {
-        name: 'Enterprise Terms',
+        name: 'Proprietary License',
         url: 'https://pragma.io/terms'
       }
     },
     servers: [
       {
-        url: 'http://localhost:3000',
-        description: 'Development Server (Local)',
-      },
-      {
         url: 'https://pragma-api.onrender.com',
         description: 'Production Server (Cloud)',
+      },
+      {
+        url: 'http://localhost:3000',
+        description: 'Development Server (Local)',
       }
     ],
     components: {
@@ -57,35 +57,41 @@ Pragma is the standard API for notarizing and certifying digital assets on a Pro
         },
       },
       schemas: {
-        // --- BILLING RESPONSES ---
+        // --- BILLING & USAGE ---
         UsageResponse: {
           type: 'object',
           properties: {
             client: { type: 'string', example: 'TechCorp Inc.' },
             plan: { type: 'string', example: 'Starter' },
-            total_requests: { type: 'integer', example: 950, description: 'Consumed credits (writes only).' },
-            limit: { type: 'string', example: 1000, description: 'Active plan limit.' },
+            total_requests: { type: 'integer', example: 950, description: 'Credits consumed (writes only).' },
+            limit: { type: 'string', example: 1000, description: 'Current plan limit.' },
             status: { type: 'string', example: 'active' }
           }
         },
         CheckoutSessionResponse: {
           type: 'object',
           properties: {
-            url: { type: 'string', example: 'https://checkout.stripe.com/c/pay/cs_test_...', description: 'Redirect user to this URL to complete payment.' }
+            url: { type: 'string', example: 'https://checkout.stripe.com/c/pay/cs_test_...', description: 'Redirect the user to this URL to complete the payment.' }
           }
         },
-        // --- CERTIFICATION RESPONSE ---
+        // --- CERTIFICATION ---
         CertificationResponse: {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: true },
-            hash: { type: 'string', example: '0x8f432b...', description: "Unique SHA-256 fingerprint." },
-            tx_hash: { type: 'string', example: '0xabc123...', description: "Blockchain transaction hash." },
+            hash: { type: 'string', example: '0x8f432b...', description: "SHA-256 Digital Fingerprint." },
+            tx_hash: { type: 'string', example: '0xabc123...', description: "Blockchain Transaction Hash." },
             usage_billed_to: { type: 'string', example: 'cust_demo_enterprise' },
-            data: { type: 'object' }
+            data: { 
+                type: 'object',
+                properties: {
+                    cert_id: { type: 'string' },
+                    block_number: { type: 'integer' }
+                }
+            }
           }
         },
-        // --- VERIFICATION RESPONSE ---
+        // --- VERIFICATION ---
         VerificationResponse: {
           type: 'object',
           properties: {
@@ -154,11 +160,11 @@ Pragma is the standard API for notarizing and certifying digital assets on a Pro
       '/billing/create-checkout-session': {
         post: {
           summary: 'Upgrade Plan (Stripe)',
-          description: 'Generates a Stripe Checkout URL to upgrade the account to Enterprise.',
+          description: 'Generates a Stripe Checkout URL to upgrade the account to Enterprise. Used by the dashboard button.',
           tags: ['Billing'],
           security: [{ ApiKeyAuth: [] }],
           requestBody: {
-            content: { 'application/json': { schema: { type: 'object' } } } // Body vuoto {}
+            content: { 'application/json': { schema: { type: 'object' } } }
           },
           responses: {
             200: {
@@ -172,7 +178,7 @@ Pragma is the standard API for notarizing and certifying digital assets on a Pro
       '/certify': {
         post: {
           summary: 'Certify Digital Asset (1 Credit)',
-          description: 'Uploads a file and notarizes it. This call **CONSUMES 1 CREDIT** from the plan.',
+          description: 'Uploads a file and notarizes it on-chain. This call **CONSUMES 1 CREDIT**.',
           tags: ['Core'],
           security: [{ ApiKeyAuth: [] }],
           requestBody: {
@@ -185,7 +191,7 @@ Pragma is the standard API for notarizing and certifying digital assets on a Pro
                   properties: {
                     file: { type: 'string', format: 'binary', description: 'File to certify' },
                     creator_wallet: { type: 'string', description: 'Optional creator wallet' },
-                    declared_type: { type: 'string', enum: ['human', 'ai', 'mixed'], default: 'human', description: 'Content origin' }
+                    declared_type: { type: 'string', enum: ['human', 'ai', 'mixed'], default: 'human' }
                   }
                 }
               }
@@ -206,7 +212,7 @@ Pragma is the standard API for notarizing and certifying digital assets on a Pro
           },
           responses: {
             200: {
-              description: 'Certification started',
+              description: 'Certification successful',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/CertificationResponse' } } }
             },
             402: {
