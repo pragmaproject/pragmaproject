@@ -5,7 +5,7 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'Pragma Enterprise API',
-      version: '2.8.0', // Updated for Smart Onboarding & Recovery
+      version: '2.9.0', // Updated for Zero-Data Privacy & Smart Onboarding
       description: `
 ### 🛡️ Trust Infrastructure for the AI Era
 Pragma is the middleware API for notarizing digital assets on a Proprietary Blockchain.
@@ -14,13 +14,13 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
 * **Immutable Registry:** Smart Contract \`ContentCert\` on Sepolia.
 * **AI Labeling:** On-chain classification (Human/AI/Mixed).
 * **Smart Billing:** Automated credits & Stripe payments.
-* **Resilient Onboarding:** Handles abandoned checkouts and account recovery automatically.
+* **Zero-Data Onboarding:** For Enterprise plans, we do NOT store client data until payment is confirmed.
 
 **Billing Rules:**
 * 🟡 **Write (POST /certify):** Consumes **1 Credit**.
 * 🟢 **Read (GET /usage, /verify, /history):** Free (**0 Credits**).
 * **Starter Plan:** Limited to 1000 requests.
-* **Enterprise Plan:** Unlimited. Requires active subscription.
+* **Enterprise Plan:** Unlimited.
 
 ---
 **Quick Start:**
@@ -72,9 +72,9 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
           type: 'object',
           properties: {
             success: { type: 'boolean', example: true },
-            apiKey: { type: 'string', nullable: true, description: 'API Key (Null for Enterprise until payment)' },
-            clientId: { type: 'string', example: 'cust_xyz123' },
-            redirectUrl: { type: 'string', nullable: true, description: 'Stripe Checkout URL for Enterprise plan.' }
+            apiKey: { type: 'string', nullable: true, description: 'API Key (Returned ONLY for Starter plan. Null for Enterprise).' },
+            clientId: { type: 'string', nullable: true, description: 'Client ID (Null for Enterprise until payment).' },
+            redirectUrl: { type: 'string', nullable: true, description: 'Stripe Checkout URL. Used to complete Enterprise registration.' }
           }
         },
         FinalizeResponse: {
@@ -173,7 +173,7 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
       '/onboarding/register': {
         post: {
           summary: 'Create new Account (Public)',
-          description: 'Generates a new Client ID. If Enterprise is selected, returns a payment URL instead of the API Key. Handles account recovery for unpaid attempts.',
+          description: 'Zero-Data Onboarding. For Enterprise plans, client data is stored in Stripe Metadata and only saved to DB after successful payment.',
           tags: ['Onboarding'],
           security: [], // Public
           requestBody: {
@@ -182,7 +182,7 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
           },
           responses: {
             200: {
-              description: 'Account created or recovered',
+              description: 'Process initiated',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/OnboardingResponse' } } }
             },
             409: { description: 'Email already registered and active' }
@@ -192,7 +192,7 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
       '/onboarding/finalize': {
         get: {
           summary: 'Finalize Payment (Public)',
-          description: 'Called by success page after Stripe payment to generate the Enterprise API Key.',
+          description: 'Called after Stripe payment to create the account and generate the Enterprise Key.',
           tags: ['Onboarding'],
           security: [],
           parameters: [
@@ -215,7 +215,7 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
           responses: {
             200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/UsageResponse' } } } },
             401: { description: 'Unauthorized' },
-            403: { description: 'Forbidden (Inactive)', content: { 'application/json': { schema: { $ref: '#/components/schemas/ForbiddenResponse' } } } }
+            403: { description: 'Forbidden (Inactive)' }
           }
         }
       },
@@ -265,8 +265,8 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
           },
           responses: {
             200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/CertificationResponse' } } } },
-            402: { description: 'Payment Required', content: { 'application/json': { schema: { $ref: '#/components/schemas/PaymentRequiredResponse' } } } },
-            403: { description: 'Forbidden (Inactive)', content: { 'application/json': { schema: { $ref: '#/components/schemas/ForbiddenResponse' } } } },
+            402: { description: 'Payment Required' },
+            403: { description: 'Forbidden (Inactive)' },
             409: { description: 'Conflict' },
             401: { description: 'Unauthorized' }
           }
