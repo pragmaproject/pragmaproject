@@ -5,27 +5,27 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'Pragma Enterprise API',
-      version: '2.2.1', // Patch version: Documentation Refinement
+      version: '2.3.0', // Updated for International Release
       description: `
 ### 🛡️ Trust Infrastructure for the AI Era
-Pragma è l'API standard per la notarizzazione e certificazione di asset digitali su Blockchain Proprietaria.
+Pragma is the standard API for notarizing and certifying digital assets on a Proprietary Blockchain.
 
-**Funzionalità Enterprise:**
-* **Smart Contract Registry:** Registro immutabile su Blockchain (Sepolia).
-* **AI Labeling:** Classificazione (Human/AI) on-chain.
-* **Smart Billing:** Sistema di crediti con Rate Limiting automatico.
-* **Webhooks & PDF:** Notifiche real-time e certificati ufficiali.
+**Enterprise Features:**
+* **Smart Contract Registry:** Immutable registry on Blockchain (Sepolia).
+* **AI Labeling:** On-chain classification (Human/AI/Mixed).
+* **Smart Billing:** Credit system with automatic Rate Limiting.
+* **Webhooks & PDF:** Real-time notifications and official certificates.
 
-**Regole di Fatturazione (Billing Rules):**
-* 🟡 **Scrittura (POST /certify):** Consuma **1 Credito**.
-* 🟢 **Lettura (GET /usage, /verify):** Gratuita (**0 Crediti**).
-* **Piano Starter:** Limite rigido a 1000 Certificazioni.
+**Billing Rules:**
+* 🟡 **Write (POST /certify):** Consumes **1 Credit**.
+* 🟢 **Read (GET /usage, /verify):** Free (**0 Credits**).
+* **Starter Plan:** Hard limit at 1000 Certifications.
 
 ---
 **Quick Start:**
-1. Clicca **Authorize** e inserisci la tua API Key (es. \`pk_live_123456789\`).
-2. Usa \`/certify\` per caricare un file.
-3. Controlla i tuoi consumi su \`/usage\`.
+1. Click **Authorize** and enter your API Key (e.g., \`pk_live_123456789\`).
+2. Use \`/certify\` to upload a file.
+3. Check your credits on \`/usage\`.
       `,
       contact: {
         name: 'Pragma Developer Support',
@@ -40,11 +40,11 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
     servers: [
       {
         url: 'http://localhost:3000',
-        description: 'Server di Sviluppo (Locale)',
+        description: 'Development Server (Local)',
       },
       {
         url: 'https://pragma-api.onrender.com',
-        description: 'Server di Produzione (Cloud)',
+        description: 'Production Server (Cloud)',
       }
     ],
     components: {
@@ -53,33 +53,33 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
           type: 'apiKey',
           in: 'header',
           name: 'x-api-key',
-          description: 'Inserisci la tua Chiave API Enterprise (es. pk_live_...)'
+          description: 'Enter your Enterprise API Key (e.g. pk_live...)'
         },
       },
       schemas: {
-        // --- RISPOSTA USAGE ---
+        // --- USAGE RESPONSE ---
         UsageResponse: {
           type: 'object',
           properties: {
             client: { type: 'string', example: 'TechCorp Inc.' },
             plan: { type: 'string', example: 'Starter' },
-            total_requests: { type: 'integer', example: 950, description: 'Crediti consumati (solo scritture).' },
-            limit: { type: 'string', example: 1000, description: 'Limite del piano attivo.' },
+            total_requests: { type: 'integer', example: 950, description: 'Consumed credits (writes only).' },
+            limit: { type: 'string', example: 1000, description: 'Active plan limit.' },
             status: { type: 'string', example: 'active' }
           }
         },
-        // --- RISPOSTA CERTIFICAZIONE ---
+        // --- CERTIFICATION RESPONSE ---
         CertificationResponse: {
           type: 'object',
           properties: {
             success: { type: 'boolean', example: true },
-            hash: { type: 'string', example: '0x8f432b...', description: "L'impronta digitale unica (SHA-256)." },
-            tx_hash: { type: 'string', example: '0xabc123...', description: "Hash della transazione sul registro Smart Contract." },
+            hash: { type: 'string', example: '0x8f432b...', description: "Unique SHA-256 fingerprint." },
+            tx_hash: { type: 'string', example: '0xabc123...', description: "Blockchain transaction hash." },
             usage_billed_to: { type: 'string', example: 'cust_demo_enterprise' },
             data: { type: 'object' }
           }
         },
-        // --- RISPOSTA VERIFICA ---
+        // --- VERIFICATION RESPONSE ---
         VerificationResponse: {
           type: 'object',
           properties: {
@@ -91,7 +91,7 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
             timestamp: { type: 'string', example: '1701234567' }
           }
         },
-        // --- PAYLOAD WEBHOOK ---
+        // --- WEBHOOK PAYLOAD ---
         WebhookPayload: {
           type: 'object',
           properties: {
@@ -108,19 +108,19 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
             }
           }
         },
-        // --- ERRORI ---
+        // --- ERRORS ---
         ErrorResponse: {
           type: 'object',
           properties: {
-            error: { type: 'string' },
-            message: { type: 'string' }
+            error: { type: 'string', example: 'Unauthorized' },
+            message: { type: 'string', example: 'Missing or invalid API Key.' }
           }
         },
         PaymentRequiredResponse: {
           type: 'object',
           properties: {
             error: { type: 'string', example: 'Payment Required' },
-            message: { type: 'string', example: 'Hai raggiunto il limite del piano Starter (1000 richieste).' }
+            message: { type: 'string', example: 'Starter plan limit reached (1000 requests).' }
           }
         }
       }
@@ -128,27 +128,27 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
     security: [
       { ApiKeyAuth: [] },
     ],
-    // --- ROTTE ---
+    // --- PATHS ---
     paths: {
       '/usage': {
         get: {
-          summary: 'Controlla consumi e piano (Gratuito)',
-          description: 'Restituisce lo stato dell\'account. Questa chiamata **NON** consuma crediti.',
+          summary: 'Check usage & plan (Free)',
+          description: 'Returns account status and credit usage. Does NOT consume credits.',
           tags: ['Billing'],
           security: [{ ApiKeyAuth: [] }],
           responses: {
             200: {
-              description: 'Stato consumi',
+              description: 'Usage status',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/UsageResponse' } } }
             },
-            401: { description: 'Non autorizzato' }
+            401: { description: 'Unauthorized' }
           }
         }
       },
       '/certify': {
         post: {
-          summary: 'Certifica un Asset Digitale (1 Credito)',
-          description: 'Carica un file e lo notarizza. Questa chiamata **CONSUMA 1 CREDITO** dal piano cliente.',
+          summary: 'Certify Digital Asset (1 Credit)',
+          description: 'Uploads a file and notarizes it. This call **CONSUMES 1 CREDIT** from the plan.',
           tags: ['Core'],
           security: [{ ApiKeyAuth: [] }],
           requestBody: {
@@ -159,9 +159,9 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
                   type: 'object',
                   required: ['file'],
                   properties: {
-                    file: { type: 'string', format: 'binary' },
-                    creator_wallet: { type: 'string' },
-                    declared_type: { type: 'string', enum: ['human', 'ai', 'mixed'], default: 'human' }
+                    file: { type: 'string', format: 'binary', description: 'File to certify' },
+                    creator_wallet: { type: 'string', description: 'Optional creator wallet' },
+                    declared_type: { type: 'string', enum: ['human', 'ai', 'mixed'], default: 'human', description: 'Content origin' }
                   }
                 }
               }
@@ -171,7 +171,7 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
             'certification.success': {
               '{$request.body.callbackUrl}': {
                 post: {
-                  summary: 'Notifica Webhook',
+                  summary: 'Webhook Notification',
                   requestBody: {
                     content: { 'application/json': { schema: { $ref: '#/components/schemas/WebhookPayload' } } }
                   },
@@ -182,50 +182,50 @@ Pragma è l'API standard per la notarizzazione e certificazione di asset digital
           },
           responses: {
             200: {
-              description: 'Certificazione avviata',
+              description: 'Certification started',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/CertificationResponse' } } }
             },
             402: {
-              description: 'Crediti Insufficienti (Upgrade richiesto)',
+              description: 'Payment Required (Upgrade needed)',
               content: { 'application/json': { schema: { $ref: '#/components/schemas/PaymentRequiredResponse' } } }
             },
-            409: { description: 'Conflitto: File già certificato (Nessun addebito)' },
-            401: { description: 'Non autorizzato' }
+            409: { description: 'Conflict: File already certified (No charge)' },
+            401: { description: 'Unauthorized' }
           }
         }
       },
       '/verify/{hash}': {
         get: {
-          summary: 'Verifica (Gratuito)',
+          summary: 'Verify on-chain (Free)',
           tags: ['Core'],
           security: [], 
           parameters: [ { in: 'path', name: 'hash', schema: { type: 'string' }, required: true } ],
           responses: {
             200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/VerificationResponse' } } } },
-            404: { description: 'Non trovato' }
+            404: { description: 'Not Found' }
           }
         }
       },
       '/download/{hash}': {
         get: {
-          summary: 'Scarica PDF (Gratuito)',
+          summary: 'Download Certificate PDF (Free)',
           tags: ['Tools'],
           security: [], 
           parameters: [ { in: 'path', name: 'hash', schema: { type: 'string' }, required: true } ],
           responses: {
             200: { content: { 'application/pdf': { schema: { type: 'string', format: 'binary' } } } },
-            404: { description: 'Non trovato' }
+            404: { description: 'Not Found' }
           }
         }
       },
       '/history/{clientId}': {
         get: {
-          summary: 'Storico Certificazioni (Gratuito)',
+          summary: 'Get Certification History (Free)',
           tags: ['Analytics'],
           security: [{ ApiKeyAuth: [] }],
           parameters: [ { in: 'path', name: 'clientId', schema: { type: 'string' }, required: true } ],
           responses: {
-            200: { description: 'Lista certificazioni' }
+            200: { description: 'List of certifications' }
           }
         }
       }

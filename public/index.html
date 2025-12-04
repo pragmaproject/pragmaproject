@@ -24,7 +24,7 @@
             overflow: hidden;
         }
         .header {
-            background: #f8ff;
+            background: #f8f9fa;
             padding: 20px;
             text-align: center;
             border-bottom: 1px solid #eee;
@@ -69,7 +69,7 @@
             color: #004085;
         }
 
-        /* --- BOX STATO ACCOUNT --- */
+        /* --- ACCOUNT STATUS BOX --- */
         #accountStatus {
             background: #f1f8ff;
             border: 1px solid #cce5ff;
@@ -149,14 +149,14 @@
         
         <p style="margin-top: 15px;">
             <a id="swaggerLink" href="#" target="_blank" style="color: #1e3c72; text-decoration: underline; font-weight: 600; font-size: 0.85rem;">
-                📄 Vai alla Documentazione Tecnica (Swagger)
+                📄 View Technical Documentation (Swagger)
             </a>
         </p>
     </div>
 
     <div class="tabs">
-        <button class="tab active" onclick="switchTab('certify')">Certifica</button>
-        <button class="tab" onclick="switchTab('verify')">Verifica</button>
+        <button class="tab active" onclick="switchTab('certify')">Certify</button>
+        <button class="tab" onclick="switchTab('verify')">Verify</button>
     </div>
 
     <div class="content">
@@ -164,20 +164,20 @@
         <div id="certifyTab" class="tab-content active">
             <form id="certifyForm">
                 <div class="form-group">
-                    <label>🔑 API Key</label>
+                    <label>🔑 API Key (Required)</label>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="apiKeyInput" placeholder="Incolla qui la tua API Key (es. pk_live_...)" required onblur="checkUsage()">
+                        <input type="text" id="apiKeyInput" placeholder="Paste your API Key here (e.g. pk_live_...)" required onblur="checkUsage()">
                         <button type="button" onclick="checkUsage()" style="width: auto; padding: 10px 15px; font-size: 0.9rem; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer;">↻ Check</button>
                     </div>
                 </div>
 
                 <div id="accountStatus">
                     <div class="status-row">
-                        <strong>Piano Attivo:</strong>
+                        <strong>Active Plan:</strong>
                         <span id="planName" class="plan-badge">Loading...</span>
                     </div>
                     <div class="status-row">
-                        <span class="usage-text">Utilizzo API:</span>
+                        <span class="usage-text">API Usage:</span>
                         <span id="usageText" class="usage-text">0 / 0</span>
                     </div>
                     <div class="usage-bar">
@@ -186,34 +186,34 @@
                 </div>
 
                 <div class="form-group">
-                    <label>📄 Documento da Certificare</label>
+                    <label>📄 Document to Notarize</label>
                     <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-                        <span id="uploadText">Clicca per selezionare un file</span>
+                        <span id="uploadText">Click to select a file</span>
                         <input type="file" id="fileInput" hidden>
                     </div>
                     <div id="fileInfo" class="file-info"></div>
                 </div>
                 
                 <div class="form-group">
-                    <label>💻 Origine Contenuto (AI Labeling)</label>
+                    <label>💻 Content Origin (AI Labeling)</label>
                     <select id="contentType">
-                        <option value="human">Umano (Creato interamente da persona)</option>
-                        <option value="ai">AI Generato (Es. Midjourney, ChatGPT)</option>
-                        <option value="mixed">Misto (Ritocco, Assemblaggio AI/Umano)</option>
+                        <option value="human">Human Made (Declared)</option>
+                        <option value="ai">AI Generated (e.g. Midjourney, ChatGPT)</option>
+                        <option value="mixed">Mixed / Hybrid</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label>👤 Wallet Creatore (Opzionale)</label>
-                    <input type="text" id="creatorWallet" placeholder="Es. 0x123...">
+                    <label>👤 Creator Wallet (Optional)</label>
+                    <input type="text" id="creatorWallet" placeholder="E.g. 0x123...">
                 </div>
 
-                <button type="submit" class="btn btn-primary" id="certBtn">Certifica su Blockchain</button>
+                <button type="submit" class="btn btn-primary" id="certBtn">Notarize on Blockchain</button>
             </form>
 
             <div id="certLoader" class="loader">
                 <div class="spinner"></div>
-                <p>Notarizzazione in corso...<br><small>Attendere la conferma dalla Blockchain</small></p>
+                <p>Notarization in progress...<br><small>Waiting for Blockchain confirmation</small></p>
             </div>
 
             <div id="certResult" class="result"></div>
@@ -222,15 +222,15 @@
         <div id="verifyTab" class="tab-content">
             <form id="verifyForm">
                 <div class="form-group">
-                    <label>🔍 Hash del File</label>
-                    <input type="text" id="hashInput" placeholder="Incolla l'hash (0x...)" required>
+                    <label>🔍 File Hash</label>
+                    <input type="text" id="hashInput" placeholder="Paste the hash (0x...)" required>
                 </div>
-                <button type="submit" class="btn btn-primary" id="verBtn">Verifica</button>
+                <button type="submit" class="btn btn-primary" id="verBtn">Verify</button>
             </form>
 
             <div id="verLoader" class="loader">
                 <div class="spinner"></div>
-                <p>Consultazione Blockchain...</p>
+                <p>Querying Blockchain Registry...</p>
             </div>
 
             <div id="verResult" class="result"></div>
@@ -242,13 +242,13 @@
 <script>
     const API_BASE = window.location.origin;
 
-    // --- FUNZIONE UTILITY PER IL LABELING AI/UMANO ---
+    // --- UTILITY: AI LABELING ---
     function getContentTypeLabel(contentType) {
         switch (contentType) {
-            case 0: return 'Umano (Dichiarato)';
-            case 1: return 'AI Generato (Dichiarato)';
-            case 2: return 'Misto (Dichiarato)';
-            default: return 'Non Specificato';
+            case 0: return 'Human Made (Declared)';
+            case 1: return 'AI Generated (Declared)';
+            case 2: return 'Mixed / Hybrid';
+            default: return 'Unspecified';
         }
     }
 
@@ -272,7 +272,7 @@
     fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
         if(file) {
-            document.getElementById('uploadText').innerText = "File selezionato!";
+            document.getElementById('uploadText').innerText = "File Selected!";
             document.getElementById('fileInfo').innerText = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
         }
     });
@@ -299,7 +299,7 @@
                 document.getElementById('planName').innerText = data.plan;
                 
                 let percentage = 0;
-                let limitText = "Illimitato";
+                let limitText = "Unlimited";
                 
                 if (data.limit !== 'Unlimited') {
                     percentage = (data.total_requests / data.limit) * 100;
@@ -320,25 +320,25 @@
                 localStorage.removeItem('pragma_api_key');
             }
         } catch (err) {
-            console.error("Errore check usage:", err);
+            console.error("Usage check error:", err);
             statusBox.style.display = 'none';
         }
     }
 
-    // LOGICA CERTIFICAZIONE
+    // CERTIFY LOGIC
     document.getElementById('certifyForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
         const apiKey = document.getElementById('apiKeyInput').value.trim();
         const wallet = document.getElementById('creatorWallet').value.trim();
-        const contentType = document.getElementById('contentType').value; // <--- VALORE RECUPERATO QUI
+        const contentType = document.getElementById('contentType').value; 
         const file = fileInput.files[0];
         const resultBox = document.getElementById('certResult');
         const loader = document.getElementById('certLoader');
         const btn = document.getElementById('certBtn');
 
-        if (!file) return alert("Seleziona un file!");
-        if (!apiKey) return alert("API Key mancante!");
+        if (!file) return alert("Please select a file!");
+        if (!apiKey) return alert("API Key is missing!");
 
         btn.disabled = true;
         loader.style.display = 'block';
@@ -346,7 +346,7 @@
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('declared_type', contentType); // <--- VALORE INVIATO QUI
+        formData.append('declared_type', contentType);
         if(wallet) formData.append('creator_wallet', wallet);
 
         try {
@@ -366,22 +366,22 @@
             if (res.ok) {
                 resultBox.className = 'result success';
                 resultBox.innerHTML = `
-                    <h3>✅ Certificazione Riuscita!</h3>
+                    <h3>✅ Certification Successful!</h3>
                     
-                    <p style="margin-top:15px"><strong>Hash File:</strong><br><code>${data.hash}</code></p>
+                    <p style="margin-top:15px"><strong>File Hash:</strong><br><code>${data.hash}</code></p>
                     <p style="margin-top:5px"><strong>TX Hash:</strong><br><a href="https://sepolia.etherscan.io/tx/${data.tx_hash}" target="_blank">${data.tx_hash}</a></p>
                     
                     <a href="${API_BASE}/download/${data.hash}" target="_blank" class="btn btn-pdf">
-                        📄 Scarica Certificato Ufficiale (PDF)
+                        📄 Download Official Certificate (PDF)
                     </a>
 
-                    <p style="margin-top:20px; font-weight:bold;">Risposta JSON Completa:</p>
+                    <p style="margin-top:20px; font-weight:bold;">Full JSON Response:</p>
                     <pre>${JSON.stringify(data, null, 2)}</pre>
                 `;
             } else {
                 resultBox.className = 'result error';
                 resultBox.innerHTML = `
-                    <strong>Errore:</strong> ${data.message || data.error || 'Sconosciuto'}
+                    <strong>Error:</strong> ${data.message || data.error || 'Unknown Error'}
                     <pre style="background:rgba(255,0,0,0.05); border-color: rgba(255,0,0,0.2)">${JSON.stringify(data, null, 2)}</pre>
                 `;
             }
@@ -391,11 +391,11 @@
             btn.disabled = false;
             resultBox.style.display = 'block';
             resultBox.className = 'result error';
-            resultBox.innerHTML = `<strong>Errore di connessione:</strong> ${err.message}`;
+            resultBox.innerHTML = `<strong>Connection Error:</strong> ${err.message}`;
         }
     });
 
-    // LOGICA VERIFICA
+    // VERIFY LOGIC
     document.getElementById('verifyForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const hash = document.getElementById('hashInput').value.trim();
@@ -417,21 +417,21 @@
 
                 resultBox.className = 'result success';
                 resultBox.innerHTML = `
-                    <h3>✅ File Autentico</h3>
-                    <h4 style="margin-top:10px; color:#1e3c72;">Etichetta Blockchain: <strong>${contentTypeLabel}</strong></h4>
-                    <p>Questo file è stato notarizzato su Blockchain.</p>
+                    <h3>✅ Authentic File</h3>
+                    <h4 style="margin-top:10px; color:#1e3c72;">Blockchain Label: <strong>${contentTypeLabel}</strong></h4>
+                    <p>This file has been notarized on the Blockchain.</p>
                     <ul style="margin-top:10px; padding-left:20px; margin-bottom:15px;">
                         <li><strong>Timestamp:</strong> ${new Date(data.timestamp * 1000).toLocaleString()}</li>
-                        <li><strong>Creatore:</strong> ${data.creator}</li>
-                        <li><strong>Fonte:</strong> ${data.source}</li>
+                        <li><strong>Creator:</strong> ${data.creator}</li>
+                        <li><strong>Source:</strong> ${data.source}</li>
                     </ul>
-                    <p style="font-weight:bold;">Dettagli Tecnici:</p>
+                    <p style="font-weight:bold;">Technical Details:</p>
                     <pre>${JSON.stringify(data, null, 2)}</pre>
                 `;
             } else {
                 resultBox.className = 'result error';
                 resultBox.innerHTML = `
-                    ⚠️ <strong>Non Trovato:</strong> Questo hash non esiste nel registro.
+                    ⚠️ <strong>Not Found:</strong> This hash does not exist in the registry.
                     <pre style="background:rgba(255,0,0,0.05); border-color: rgba(255,0,0,0.2)">${JSON.stringify(data, null, 2)}</pre>
                 `;
             }
@@ -439,7 +439,7 @@
             loader.style.display = 'none';
             resultBox.style.display = 'block';
             resultBox.className = 'result error';
-            resultBox.innerHTML = `Errore: ${err.message}`;
+            resultBox.innerHTML = `Error: ${err.message}`;
         }
     });
 </script>
