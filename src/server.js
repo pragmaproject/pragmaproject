@@ -20,11 +20,9 @@ app.use(cors());
 
 // B. STRIPE WEBHOOK (Deve stare PRIMA di express.json)
 // Stripe ha bisogno del body "grezzo" (raw) per verificare la firma di sicurezza.
-// Se mettessimo express.json() prima, corromperebbe i dati del webhook.
 app.use("/webhooks-stripe", require("./routes/webhooks-stripe"));
 
 // C. BODY PARSERS (Per tutto il resto del sito)
-// Ora possiamo convertire i body in JSON per le altre rotte
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true })); 
 
@@ -32,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 // 2. FRONTEND & DOCS
 // =========================================================
 
-// Serve la Dashboard HTML
+// Serve TUTTI i file HTML nella cartella public (index.html, signup.html)
 app.use(express.static(path.join(__dirname, "../public")));
 
 // Serve la Documentazione Swagger
@@ -47,33 +45,28 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 app.get("/api-status", (req, res) => {
     res.json({ 
         status: "online", 
-        version: "2.4.0", 
+        version: "2.6.0", 
         environment: process.env.NODE_ENV || "development",
         message: "Pragma Enterprise API is running 🚀" 
     });
 });
 
-// Verifica Hash (Chiunque deve poter verificare)
+// Verifica Hash & Download
 app.use("/verify", require("./routes/verify"));
-
-// Download PDF (Link pubblico per facilitare la condivisione)
 app.use("/download", require("./routes/download"));
+
+// NUOVA ROTTA: ISCRIZIONE & GENERAZIONE CHIAVI
+// (Pubblica per permettere a chiunque di creare un account)
+app.use("/onboarding", require("./routes/onboarding"));
 
 
 // =========================================================
 // 4. ROTTE PROTETTE (🔐 Richiedono API Key)
 // =========================================================
 
-// Certificazione (Scrittura su Blockchain - A pagamento)
 app.use("/certify", requireApiKey, require("./routes/certify"));
-
-// Storico Certificazioni
 app.use("/history", requireApiKey, require("./routes/history"));
-
-// Controllo Consumi (Billing)
 app.use("/usage", requireApiKey, require("./routes/usage"));
-
-// Pagamenti Stripe (Creazione Link)
 app.use("/billing", requireApiKey, require("./routes/billing"));
 
 
@@ -100,7 +93,10 @@ app.listen(PORT, () => {
     ==================================================
     📡 API URL:      http://localhost:${PORT}
     📄 Docs:         http://localhost:${PORT}/api-docs
-    🖥️  Dashboard:    http://localhost:${PORT}
+    
+    🖥️  DASHBOARD:    http://localhost:${PORT}/index.html
+    📝 REGISTRAZIONE: http://localhost:${PORT}/signup.html
+    
     💳 Stripe:       Webhook attivo su /webhooks-stripe
     ==================================================
     `);
