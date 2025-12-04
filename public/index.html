@@ -32,6 +32,26 @@
         .header h1 { color: #333; font-size: 1.5rem; margin-bottom: 5px; }
         .header p { color: #666; font-size: 0.9rem; }
         
+        /* LINK HEADER */
+        .header-links {
+            margin-top: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .header-link {
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 5px 10px;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+        .link-docs { color: #1e3c72; background: #eef2f7; }
+        .link-docs:hover { background: #dce5f0; }
+        .link-signup { color: #0f5132; background: #d1e7dd; }
+        .link-signup:hover { background: #badbcc; }
+
         .tabs { display: flex; background: #eee; }
         .tab {
             flex: 1;
@@ -69,7 +89,7 @@
             color: #004085;
         }
 
-        /* --- ACCOUNT STATUS BOX --- */
+        /* --- BOX STATO ACCOUNT --- */
         #accountStatus {
             background: #f1f8ff;
             border: 1px solid #cce5ff;
@@ -92,12 +112,10 @@
         }
         .usage-text { font-size: 0.85rem; color: #666; }
         
-        /* BOTTONE UPGRADE STRIPE */
         .upgrade-btn {
-            background: #635bff; /* Stripe Purple */
-            color: white; border: none; padding: 5px 10px; border-radius: 4px; 
-            font-size: 0.8rem; cursor: pointer; margin-left: 10px;
-            text-decoration: none; display: none; /* Nascosto se Enterprise */
+            background: #635bff; color: white; border: none; padding: 6px 12px; border-radius: 4px; 
+            font-size: 0.8rem; cursor: pointer; margin-left: 10px; text-decoration: none; display: none; font-weight: bold;
+            transition: background 0.2s;
         }
         .upgrade-btn:hover { background: #4b45c6; }
         /* -------------------------------- */
@@ -156,11 +174,15 @@
         <h1>🛡️ Pragma Enterprise</h1>
         <p>Blockchain Notarization & Certification API</p>
         
-        <p style="margin-top: 15px;">
-            <a id="swaggerLink" href="#" target="_blank" style="color: #1e3c72; text-decoration: underline; font-weight: 600; font-size: 0.85rem;">
-                📄 View Technical Documentation (Swagger)
+        <!-- LINK DI NAVIGAZIONE -->
+        <div class="header-links">
+            <a id="swaggerLink" href="#" target="_blank" class="header-link link-docs">
+                📄 API Docs (Swagger)
             </a>
-        </p>
+            <a href="/signup.html" target="_blank" class="header-link link-signup">
+                📝 Get API Key (Signup)
+            </a>
+        </div>
     </div>
 
     <div class="tabs">
@@ -170,6 +192,7 @@
 
     <div class="content">
         
+        <!-- CERTIFY SECTION -->
         <div id="certifyTab" class="tab-content active">
             <form id="certifyForm">
                 <div class="form-group">
@@ -231,6 +254,7 @@
             <div id="certResult" class="result"></div>
         </div>
 
+        <!-- VERIFY SECTION -->
         <div id="verifyTab" class="tab-content">
             <form id="verifyForm">
                 <div class="form-group">
@@ -310,7 +334,6 @@
                 
                 document.getElementById('planName').innerText = data.plan;
                 
-                // MOSTRA IL TASTO UPGRADE SOLO SE IL PIANO NON È ENTERPRISE
                 if (data.plan && data.plan.toLowerCase().includes('enterprise')) {
                     upgradeBtn.style.display = 'none';
                 } else {
@@ -344,7 +367,6 @@
         }
     }
 
-    // --- FUNZIONE CHE CHIAMA LO STRIPE CHECKOUT ---
     async function startCheckout() {
         const apiKey = document.getElementById('apiKeyInput').value.trim();
         const upgradeBtn = document.getElementById('upgradeBtn');
@@ -367,9 +389,9 @@
             const data = await res.json();
 
             if (data.url) {
-                window.location.href = data.url; // Reindirizza a Stripe
+                window.location.href = data.url;
             } else {
-                alert("Error creating payment session: " + (data.error || "Unknown"));
+                alert("Error: " + (data.error || "Unknown"));
             }
         } catch (err) {
             alert("Connection error: " + err.message);
@@ -379,7 +401,6 @@
         }
     }
 
-    // CERTIFY LOGIC
     document.getElementById('certifyForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -449,7 +470,6 @@
         }
     });
 
-    // VERIFY LOGIC
     document.getElementById('verifyForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const hash = document.getElementById('hashInput').value.trim();

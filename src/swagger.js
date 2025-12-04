@@ -5,7 +5,7 @@ const options = {
     openapi: '3.0.0',
     info: {
       title: 'Pragma Enterprise API',
-      version: '2.5.0', // Updated for Stripe & Billing Complete Integration
+      version: '2.6.0', // Updated for Self-Service Onboarding
       description: `
 ### 🛡️ Trust Infrastructure for the AI Era
 Pragma is the middleware API for notarizing digital assets on a Proprietary Blockchain.
@@ -14,7 +14,7 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
 * **Immutable Registry:** Smart Contract \`ContentCert\` on Sepolia.
 * **AI Labeling:** On-chain classification (Human/AI/Mixed).
 * **Smart Billing:** Automated credits & Stripe payments.
-* **Legal Tech:** Instant PDF Certificates with Etherscan QR Codes.
+* **Self-Service:** Instant API Key generation via API or Dashboard.
 
 **Billing Rules:**
 * 🟡 **Write (POST /certify):** Consumes **1 Credit**.
@@ -23,9 +23,9 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
 
 ---
 **Quick Start:**
-1. Click **Authorize** and paste your API Key.
-2. Check your credits on \`/usage\`.
-3. If you need to upgrade, call \`/billing/create-checkout-session\`.
+1. **No Account?** Use \`/onboarding/register\` to get an API Key immediately.
+2. **Have a Key?** Click **Authorize** above.
+3. **Start:** Upload a file via \`/certify\`.
       `,
       contact: {
         name: 'Pragma Developer Support',
@@ -57,6 +57,25 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
         },
       },
       schemas: {
+        // --- ONBOARDING ---
+        OnboardingRequest: {
+          type: 'object',
+          required: ['name', 'email', 'plan'],
+          properties: {
+            name: { type: 'string', example: 'TechCorp Inc.' },
+            email: { type: 'string', format: 'email', example: 'dev@techcorp.com' },
+            plan: { type: 'string', enum: ['Starter', 'Enterprise'], example: 'Starter' }
+          }
+        },
+        OnboardingResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            apiKey: { type: 'string', example: 'pk_live_a1b2c3d4...' },
+            clientId: { type: 'string', example: 'cust_xyz123' },
+            redirectUrl: { type: 'string', nullable: true, description: 'Stripe Checkout URL (only for Enterprise plan)' }
+          }
+        },
         // --- BILLING & USAGE ---
         UsageResponse: {
           type: 'object',
@@ -71,7 +90,7 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
         CheckoutSessionResponse: {
           type: 'object',
           properties: {
-            url: { type: 'string', example: 'https://checkout.stripe.com/c/pay/cs_test_...', description: 'Redirect the user to this URL to complete the payment.' }
+            url: { type: 'string', example: 'https://checkout.stripe.com/c/pay/cs_test_...', description: 'Redirect URL.' }
           }
         },
         // --- CERTIFICATION ---
@@ -82,13 +101,7 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
             hash: { type: 'string', example: '0x8f432b...', description: "SHA-256 Digital Fingerprint." },
             tx_hash: { type: 'string', example: '0xabc123...', description: "Blockchain Transaction Hash." },
             usage_billed_to: { type: 'string', example: 'cust_demo_enterprise' },
-            data: { 
-                type: 'object',
-                properties: {
-                    cert_id: { type: 'string' },
-                    block_number: { type: 'integer' }
-                }
-            }
+            data: { type: 'object' }
           }
         },
         // --- VERIFICATION ---
@@ -127,13 +140,6 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
             error: { type: 'string', example: 'Unauthorized' },
             message: { type: 'string', example: 'Missing or invalid API Key.' }
           }
-        },
-        PaymentRequiredResponse: {
-          type: 'object',
-          properties: {
-            error: { type: 'string', example: 'Payment Required' },
-            message: { type: 'string', example: 'Starter plan limit reached (1000 requests). Please upgrade.' }
-          }
         }
       }
     },
@@ -142,17 +148,32 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
     ],
     // --- PATHS ---
     paths: {
+      '/onboarding/register': {
+        post: {
+          summary: 'Create new Account (Public)',
+          description: 'Generates a new Client ID and API Key instantly. No auth required.',
+          tags: ['Onboarding'],
+          security: [], // Public
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/OnboardingRequest' } } }
+          },
+          responses: {
+            200: {
+              description: 'Account created',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/OnboardingResponse' } } }
+            },
+            409: { description: 'Email already registered' }
+          }
+        }
+      },
       '/usage': {
         get: {
           summary: 'Check Usage & Plan',
-          description: 'Returns account status and credit usage. Does NOT consume credits.',
           tags: ['Billing'],
           security: [{ ApiKeyAuth: [] }],
           responses: {
-            200: {
-              description: 'Usage status',
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/UsageResponse' } } }
-            },
+            200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/UsageResponse' } } } },
             401: { description: 'Unauthorized' }
           }
         }
@@ -160,17 +181,11 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
       '/billing/create-checkout-session': {
         post: {
           summary: 'Upgrade Plan (Stripe)',
-          description: 'Generates a Stripe Checkout URL to upgrade the account to Enterprise. Used by the dashboard button.',
           tags: ['Billing'],
           security: [{ ApiKeyAuth: [] }],
-          requestBody: {
-            content: { 'application/json': { schema: { type: 'object' } } }
-          },
+          requestBody: { content: { 'application/json': { schema: { type: 'object' } } } },
           responses: {
-            200: {
-              description: 'Payment URL generated',
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/CheckoutSessionResponse' } } }
-            },
+            200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/CheckoutSessionResponse' } } } },
             401: { description: 'Unauthorized' }
           }
         }
@@ -178,19 +193,17 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
       '/certify': {
         post: {
           summary: 'Certify Digital Asset (1 Credit)',
-          description: 'Uploads a file and notarizes it on-chain. This call **CONSUMES 1 CREDIT**.',
           tags: ['Core'],
           security: [{ ApiKeyAuth: [] }],
           requestBody: {
-            required: true,
             content: {
               'multipart/form-data': {
                 schema: {
                   type: 'object',
                   required: ['file'],
                   properties: {
-                    file: { type: 'string', format: 'binary', description: 'File to certify' },
-                    creator_wallet: { type: 'string', description: 'Optional creator wallet' },
+                    file: { type: 'string', format: 'binary' },
+                    creator_wallet: { type: 'string' },
                     declared_type: { type: 'string', enum: ['human', 'ai', 'mixed'], default: 'human' }
                   }
                 }
@@ -202,24 +215,16 @@ Pragma is the middleware API for notarizing digital assets on a Proprietary Bloc
               '{$request.body.callbackUrl}': {
                 post: {
                   summary: 'Webhook Notification',
-                  requestBody: {
-                    content: { 'application/json': { schema: { $ref: '#/components/schemas/WebhookPayload' } } }
-                  },
+                  requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/WebhookPayload' } } } },
                   responses: { '200': { description: 'OK' } }
                 }
               }
             }
           },
           responses: {
-            200: {
-              description: 'Certification successful',
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/CertificationResponse' } } }
-            },
-            402: {
-              description: 'Payment Required (Limit Reached)',
-              content: { 'application/json': { schema: { $ref: '#/components/schemas/PaymentRequiredResponse' } } }
-            },
-            409: { description: 'Conflict: File already certified' },
+            200: { content: { 'application/json': { schema: { $ref: '#/components/schemas/CertificationResponse' } } } },
+            402: { description: 'Payment Required' },
+            409: { description: 'Conflict' },
             401: { description: 'Unauthorized' }
           }
         }
