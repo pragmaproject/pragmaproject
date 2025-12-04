@@ -87,6 +87,14 @@ app.use("/download", require("./routes/download"));
 
 // ... gestione errori ...
 
+
+// ... gli altri require ...
+// AGGIUNGI QUESTA RIGA DOVE CI SONO GLI ALTRI APP.USE:
+
+// Billing: Creazione link di pagamento
+// Richiede: x-api-key nell'header
+app.use("/billing", requireApiKey, require("./routes/billing"));
+
 // =========================================================
 // 6. AVVIO DEL SERVER
 // =========================================================

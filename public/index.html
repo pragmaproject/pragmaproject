@@ -91,6 +91,15 @@
             height: 100%; background: #28a745; width: 0%; transition: width 0.5s ease;
         }
         .usage-text { font-size: 0.85rem; color: #666; }
+        
+        /* BOTTONE UPGRADE STRIPE */
+        .upgrade-btn {
+            background: #635bff; /* Stripe Purple */
+            color: white; border: none; padding: 5px 10px; border-radius: 4px; 
+            font-size: 0.8rem; cursor: pointer; margin-left: 10px;
+            text-decoration: none; display: none; /* Nascosto se Enterprise */
+        }
+        .upgrade-btn:hover { background: #4b45c6; }
         /* -------------------------------- */
 
         .upload-box {
@@ -173,8 +182,11 @@
 
                 <div id="accountStatus">
                     <div class="status-row">
-                        <strong>Active Plan:</strong>
-                        <span id="planName" class="plan-badge">Loading...</span>
+                        <div>
+                            <strong>Active Plan:</strong>
+                            <span id="planName" class="plan-badge">Loading...</span>
+                            <button type="button" id="upgradeBtn" class="upgrade-btn" onclick="startCheckout()">⚡ Upgrade to Enterprise</button>
+                        </div>
                     </div>
                     <div class="status-row">
                         <span class="usage-text">API Usage:</span>
@@ -242,7 +254,6 @@
 <script>
     const API_BASE = window.location.origin;
 
-    // --- UTILITY: AI LABELING ---
     function getContentTypeLabel(contentType) {
         switch (contentType) {
             case 0: return 'Human Made (Declared)';
@@ -280,6 +291,7 @@
     async function checkUsage() {
         const apiKey = document.getElementById('apiKeyInput').value.trim();
         const statusBox = document.getElementById('accountStatus');
+        const upgradeBtn = document.getElementById('upgradeBtn');
         
         if (!apiKey) {
             statusBox.style.display = 'none';
@@ -297,6 +309,13 @@
                 localStorage.setItem('pragma_api_key', apiKey);
                 
                 document.getElementById('planName').innerText = data.plan;
+                
+                // MOSTRA IL TASTO UPGRADE SOLO SE IL PIANO NON È ENTERPRISE
+                if (data.plan && data.plan.toLowerCase().includes('enterprise')) {
+                    upgradeBtn.style.display = 'none';
+                } else {
+                    upgradeBtn.style.display = 'inline-block';
+                }
                 
                 let percentage = 0;
                 let limitText = "Unlimited";
@@ -322,6 +341,41 @@
         } catch (err) {
             console.error("Usage check error:", err);
             statusBox.style.display = 'none';
+        }
+    }
+
+    // --- FUNZIONE CHE CHIAMA LO STRIPE CHECKOUT ---
+    async function startCheckout() {
+        const apiKey = document.getElementById('apiKeyInput').value.trim();
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        
+        if (!apiKey) return alert("API Key missing!");
+
+        upgradeBtn.innerText = "Connecting to Stripe...";
+        upgradeBtn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE}/billing/create-checkout-session`, {
+                method: 'POST',
+                headers: { 
+                    'x-api-key': apiKey,
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({}) 
+            });
+
+            const data = await res.json();
+
+            if (data.url) {
+                window.location.href = data.url; // Reindirizza a Stripe
+            } else {
+                alert("Error creating payment session: " + (data.error || "Unknown"));
+            }
+        } catch (err) {
+            alert("Connection error: " + err.message);
+        } finally {
+            upgradeBtn.innerText = "⚡ Upgrade to Enterprise";
+            upgradeBtn.disabled = false;
         }
     }
 
