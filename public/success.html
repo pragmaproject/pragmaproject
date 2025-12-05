@@ -3,76 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Successful</title>
+    <title>Payment Successful | Pragma</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #e3f9e5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 500px; }
-        h1 { color: #0f5132; margin-bottom: 10px; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #28a745; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0fdf4; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; max-width: 500px; width: 90%; }
+        h1 { color: #166534; margin-bottom: 10px; }
+        p { color: #666; margin-bottom: 20px; }
+        .key-box { background: #f3f4f6; border: 2px dashed #d1d5db; padding: 15px; font-family: monospace; font-size: 1.2rem; margin: 20px 0; word-break: break-all; color: #374151; }
+        .btn { display: inline-block; background: #166534; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+        .btn:hover { background: #14532d; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #166534; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .key-box { background: #f8f9fa; padding: 15px; border: 2px dashed #28a745; font-family: monospace; font-size: 1.2rem; margin: 20px 0; word-break: break-all; display: none; }
-        .btn { display: inline-block; padding: 12px 24px; background: #28a745; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px; display: none; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div id="loading">
-        <div class="spinner"></div>
-        <h2>Verifying Payment...</h2>
-        <p>Please wait while we generate your secure Enterprise Key.</p>
+    <div class="card">
+        <div id="loadingState">
+            <div class="loader"></div>
+            <h2>Finalizing Account...</h2>
+            <p>Please wait while we generate your secure API keys.</p>
+        </div>
+
+        <div id="successState" class="hidden">
+            <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
+            <h1>Payment Successful!</h1>
+            <p>Welcome to Pragma Enterprise. Here is your secret API Key:</p>
+            
+            <div class="key-box" id="apiKeyDisplay">...</div>
+            
+            <p style="font-size: 0.9rem; color: #dc2626;">⚠️ Copy this key now. You won't see it again.</p>
+            
+            <a href="/index.html" class="btn">Go to Dashboard</a>
+        </div>
+
+        <div id="errorState" class="hidden">
+            <h2 style="color: #dc2626;">Something went wrong</h2>
+            <p id="errorText">Could not retrieve your key.</p>
+            <a href="mailto:support@pragma.io" class="btn" style="background: #666;">Contact Support</a>
+        </div>
     </div>
 
-    <div id="success" style="display: none;">
-        <h1>🎉 Welcome Aboard!</h1>
-        <p>Payment confirmed. Here is your Enterprise API Key:</p>
-        <div class="key-box" id="keyDisplay"></div>
-        <p style="color: #666; font-size: 0.9rem;">Save it immediately! For security reasons, we won't show it again.</p>
-        <a href="/index.html" class="btn" id="dashBtn">Go to Dashboard</a>
-    </div>
+    <script>
+        async function finalize() {
+            // Recupera session_id dall'URL (messo da Stripe)
+            const params = new URLSearchParams(window.location.search);
+            const sessionId = params.get('session_id');
 
-    <div id="error" style="display: none; color: red;">
-        <h2>⚠️ Error</h2>
-        <p id="errorMsg">Something went wrong.</p>
-    </div>
-</div>
-
-<script>
-    async function finalize() {
-        const params = new URLSearchParams(window.location.search);
-        const sessionId = params.get('session_id');
-
-        if (!sessionId) {
-            showError("Session ID missing.");
-            return;
-        }
-
-        try {
-            const res = await fetch(`/onboarding/finalize?session_id=${sessionId}`);
-            const data = await res.json();
-
-            if (res.ok) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('success').style.display = 'block';
-                document.getElementById('keyDisplay').innerText = data.apiKey;
-                document.getElementById('keyDisplay').style.display = 'block';
-                document.getElementById('dashBtn').style.display = 'inline-block';
-            } else {
-                showError(data.error);
+            if (!sessionId) {
+                showError("No session ID found.");
+                return;
             }
-        } catch (err) {
-            showError("Connection failed.");
+
+            try {
+                // Chiama il backend per confermare il pagamento e farsi dare la chiave
+                const res = await fetch(`/onboarding/finalize?session_id=${sessionId}`);
+                const data = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('loadingState').classList.add('hidden');
+                    document.getElementById('successState').classList.remove('hidden');
+                    document.getElementById('apiKeyDisplay').innerText = data.apiKey;
+                    
+                    // Pulisce l'URL per estetica
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                } else {
+                    showError(data.error || "Verification failed");
+                }
+            } catch (err) {
+                showError("Connection error: " + err.message);
+            }
         }
-    }
 
-    function showError(msg) {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('errorMsg').innerText = msg;
-    }
+        function showError(msg) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+            document.getElementById('errorText').innerText = msg;
+        }
 
-    finalize();
-</script>
+        // Avvia al caricamento
+        finalize();
+    </script>
 
 </body>
 </html>
