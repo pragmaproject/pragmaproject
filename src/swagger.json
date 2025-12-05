@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Pragma Enterprise API",
-    "description": "API middleware per la notarizzazione Blockchain su Polygon/Sepolia. Supporta Zero-Knowledge Privacy, AI Labeling e Billing integrato via Stripe.\n\n### Piani Disponibili\n- **Developer:** Gratis (50 req/mese)\n- **Startup:** €299 (5.000 req/mese)\n- **Scale:** €999 (25.000 req/mese)\n- **Enterprise:** A consumo (Illimitato)",
+    "description": "Blockchain notarization middleware API on Polygon/Sepolia. Supports Zero-Knowledge Privacy, AI Labeling, and integrated Billing via Stripe.\n\n### Available Plans\n- **Developer:** Free (50 req/mo)\n- **Startup:** €299 (5,000 req/mo)\n- **Scale:** €999 (25,000 req/mo)\n- **Enterprise:** Pay-as-you-go (Unlimited)",
     "version": "2.9.0",
     "contact": {
       "email": "dev@pragma.io"
@@ -15,25 +15,25 @@
   "servers": [
     {
       "url": "https://pragma-api.onrender.com",
-      "description": "Server di Produzione"
+      "description": "Production Server"
     },
     {
       "url": "http://localhost:3000",
-      "description": "Server di Sviluppo Locale"
+      "description": "Local Development Server"
     }
   ],
   "tags": [
     {
       "name": "Certification",
-      "description": "Operazioni di notarizzazione e recupero certificati"
+      "description": "Notarization operations and certificate retrieval"
     },
     {
       "name": "Account",
-      "description": "Gestione account, usage e billing"
+      "description": "Account management, usage tracking, and billing"
     },
     {
       "name": "Onboarding",
-      "description": "Registrazione pubblica e pagamenti"
+      "description": "Public registration and payments"
     }
   ],
   "components": {
@@ -42,7 +42,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "x-api-key",
-        "description": "Inserisci la tua chiave API (es. pk_live_...)"
+        "description": "Enter your API Key (e.g., pk_live_...)"
       }
     },
     "schemas": {
@@ -55,13 +55,13 @@
         "properties": {
           "hash": {
             "type": "string",
-            "description": "Hash SHA-256 del file (formato hex string)",
+            "description": "SHA-256 file hash (hex string format)",
             "example": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
           },
           "description": {
             "type": "string",
-            "description": "Descrizione opzionale del contenuto (max 200 caratteri)",
-            "example": "Contratto Preliminare - Project Alpha"
+            "description": "Optional content description (max 200 chars)",
+            "example": "Preliminary Contract - Project Alpha"
           },
           "ai_label": {
             "type": "string",
@@ -70,7 +70,7 @@
               "AI",
               "Mixed"
             ],
-            "description": "Dichiarazione di paternità per conformità AI Act",
+            "description": "Authorship declaration for AI Act compliance",
             "example": "Human"
           }
         }
@@ -85,12 +85,12 @@
         "properties": {
           "name": {
             "type": "string",
-            "example": "Mario Rossi Srl"
+            "example": "Mario Rossi Corp"
           },
           "email": {
             "type": "string",
             "format": "email",
-            "example": "tech@azienda.it"
+            "example": "tech@company.com"
           },
           "plan": {
             "type": "string",
@@ -100,7 +100,7 @@
               "Scale",
               "Enterprise"
             ],
-            "description": "Il piano scelto. Developer è gratuito e immediato.",
+            "description": "Selected plan. Developer is free/immediate, others require payment.",
             "example": "Startup"
           }
         }
@@ -114,7 +114,7 @@
           },
           "message": {
             "type": "string",
-            "example": "Il campo 'hash' è obbligatorio."
+            "example": "The 'hash' field is required."
           }
         }
       }
@@ -131,8 +131,8 @@
         "tags": [
           "Certification"
         ],
-        "summary": "Notarizza un file su Blockchain",
-        "description": "Invia l'hash di un file per la registrazione immutabile. Richiede crediti sufficienti nel piano attivo.",
+        "summary": "Notarize a file on Blockchain",
+        "description": "Submits a file hash for immutable registration. Requires sufficient credits in the active plan.",
         "requestBody": {
           "required": true,
           "content": {
@@ -145,7 +145,7 @@
         },
         "responses": {
           "200": {
-            "description": "Certificazione avviata con successo",
+            "description": "Certification started successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -167,7 +167,7 @@
             }
           },
           "400": {
-            "description": "Dati mancanti o hash non valido",
+            "description": "Missing data or invalid hash",
             "content": {
               "application/json": {
                 "schema": {
@@ -177,7 +177,7 @@
             }
           },
           "402": {
-            "description": "Pagamento Richiesto (Limite Raggiunto)",
+            "description": "Payment Required (Limit Reached)",
             "content": {
               "application/json": {
                 "schema": {
@@ -189,13 +189,13 @@
                 },
                 "example": {
                   "error": "Payment Required",
-                  "message": "Hai raggiunto il limite del piano Startup (5000 richieste). Fai l'upgrade."
+                  "message": "You have reached the limit of the Startup plan (5000 requests). Please upgrade."
                 }
               }
             }
           },
           "403": {
-            "description": "API Key non valida o account sospeso"
+            "description": "Invalid API Key or suspended account"
           }
         }
       }
@@ -205,8 +205,8 @@
         "tags": [
           "Certification"
         ],
-        "summary": "Ottieni stato o PDF",
-        "description": "Recupera lo stato di una transazione e il link al certificato PDF generato.",
+        "summary": "Get Status or PDF",
+        "description": "Retrieves transaction status and the generated PDF certificate link.",
         "parameters": [
           {
             "in": "path",
@@ -215,12 +215,12 @@
               "type": "string"
             },
             "required": true,
-            "description": "L'hash della transazione Blockchain"
+            "description": "Blockchain Transaction Hash"
           }
         ],
         "responses": {
           "200": {
-            "description": "Dettagli trovati",
+            "description": "Details found",
             "content": {
               "application/json": {
                 "schema": {
@@ -242,7 +242,7 @@
             }
           },
           "404": {
-            "description": "Certificazione non trovata"
+            "description": "Certification not found"
           }
         }
       }
@@ -252,11 +252,11 @@
         "tags": [
           "Account"
         ],
-        "summary": "Controlla Usage e Limiti",
-        "description": "Restituisce il consumo attuale del cliente e il limite del piano attivo.",
+        "summary": "Check Usage and Limits",
+        "description": "Returns current client usage and active plan limits.",
         "responses": {
           "200": {
-            "description": "Dati utilizzo",
+            "description": "Usage data",
             "content": {
               "application/json": {
                 "schema": {
@@ -270,7 +270,7 @@
                   }
                 },
                 "example": {
-                  "client": "Mario Rossi Tech",
+                  "client": "Mario Rossi Corp",
                   "plan": "Startup",
                   "total_requests": 1542,
                   "limit": 5000,
@@ -287,11 +287,11 @@
         "tags": [
           "Account"
         ],
-        "summary": "Crea Link di Pagamento (Upgrade)",
-        "description": "Genera un link Stripe per fare l'upgrade del piano o aggiornare i dati di fatturazione.",
+        "summary": "Create Payment Link (Upgrade)",
+        "description": "Generates a Stripe link to upgrade plan or update billing details.",
         "responses": {
           "200": {
-            "description": "Link generato",
+            "description": "Link generated",
             "content": {
               "application/json": {
                 "schema": {
@@ -314,8 +314,8 @@
         "tags": [
           "Onboarding"
         ],
-        "summary": "Registrazione Nuovi Utenti",
-        "description": "Endpoint pubblico per la registrazione. Non richiede Auth.",
+        "summary": "New User Registration",
+        "description": "Public endpoint for registration. No Auth required.",
         "security": [],
         "requestBody": {
           "required": true,
@@ -329,7 +329,7 @@
         },
         "responses": {
           "200": {
-            "description": "Successo (API Key diretta o Link Pagamento)",
+            "description": "Success (Direct API Key or Payment Link)",
             "content": {
               "application/json": {
                 "schema": {
@@ -342,14 +342,14 @@
                 },
                 "examples": {
                   "Developer": {
-                    "summary": "Piano Gratuito",
+                    "summary": "Free Plan",
                     "value": {
                       "success": true,
                       "apiKey": "pk_live_..."
                     }
                   },
                   "Enterprise": {
-                    "summary": "Piano a Pagamento",
+                    "summary": "Paid Plan",
                     "value": {
                       "success": true,
                       "redirectUrl": "https://checkout.stripe.com/..."
@@ -360,7 +360,7 @@
             }
           },
           "409": {
-            "description": "Email già registrata"
+            "description": "Email already registered"
           }
         }
       }
@@ -370,8 +370,8 @@
         "tags": [
           "Onboarding"
         ],
-        "summary": "Callback post-pagamento",
-        "description": "Chiamato dal frontend dopo il ritorno da Stripe per confermare l'account e ottenere la chiave.",
+        "summary": "Post-Payment Callback",
+        "description": "Called by frontend after returning from Stripe to confirm account and retrieve API Key.",
         "security": [],
         "parameters": [
           {
@@ -381,12 +381,12 @@
               "type": "string"
             },
             "required": true,
-            "description": "L'ID della sessione di checkout Stripe"
+            "description": "Stripe Checkout Session ID"
           }
         ],
         "responses": {
           "200": {
-            "description": "Account attivato e chiave generata",
+            "description": "Account activated and Key generated",
             "content": {
               "application/json": {
                 "schema": {
@@ -398,13 +398,13 @@
                 },
                 "example": {
                   "apiKey": "pk_live_...",
-                  "email": "mario@tech.com"
+                  "email": "tech@company.com"
                 }
               }
             }
           },
           "400": {
-            "description": "Session ID mancante o invalido"
+            "description": "Missing or invalid Session ID"
           }
         }
       }
