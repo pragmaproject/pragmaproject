@@ -1,0 +1,413 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Pragma Enterprise API",
+    "description": "API middleware per la notarizzazione Blockchain su Polygon/Sepolia. Supporta Zero-Knowledge Privacy, AI Labeling e Billing integrato via Stripe.\n\n### Piani Disponibili\n- **Developer:** Gratis (50 req/mese)\n- **Startup:** €299 (5.000 req/mese)\n- **Scale:** €999 (25.000 req/mese)\n- **Enterprise:** A consumo (Illimitato)",
+    "version": "2.9.0",
+    "contact": {
+      "email": "dev@pragma.io"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://pragma.io/terms"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://pragma-api.onrender.com",
+      "description": "Server di Produzione"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Server di Sviluppo Locale"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Certification",
+      "description": "Operazioni di notarizzazione e recupero certificati"
+    },
+    {
+      "name": "Account",
+      "description": "Gestione account, usage e billing"
+    },
+    {
+      "name": "Onboarding",
+      "description": "Registrazione pubblica e pagamenti"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "Inserisci la tua chiave API (es. pk_live_...)"
+      }
+    },
+    "schemas": {
+      "CertificationRequest": {
+        "type": "object",
+        "required": [
+          "hash",
+          "ai_label"
+        ],
+        "properties": {
+          "hash": {
+            "type": "string",
+            "description": "Hash SHA-256 del file (formato hex string)",
+            "example": "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descrizione opzionale del contenuto (max 200 caratteri)",
+            "example": "Contratto Preliminare - Project Alpha"
+          },
+          "ai_label": {
+            "type": "string",
+            "enum": [
+              "Human",
+              "AI",
+              "Mixed"
+            ],
+            "description": "Dichiarazione di paternità per conformità AI Act",
+            "example": "Human"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "plan"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Mario Rossi Srl"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "tech@azienda.it"
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "Developer",
+              "Startup",
+              "Scale",
+              "Enterprise"
+            ],
+            "description": "Il piano scelto. Developer è gratuito e immediato.",
+            "example": "Startup"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Bad Request"
+          },
+          "message": {
+            "type": "string",
+            "example": "Il campo 'hash' è obbligatorio."
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/certify": {
+      "post": {
+        "tags": [
+          "Certification"
+        ],
+        "summary": "Notarizza un file su Blockchain",
+        "description": "Invia l'hash di un file per la registrazione immutabile. Richiede crediti sufficienti nel piano attivo.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Certificazione avviata con successo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "txHash": { "type": "string" },
+                    "certificateUrl": { "type": "string" },
+                    "remaining_credits": { "type": "integer" }
+                  }
+                },
+                "example": {
+                  "success": true,
+                  "txHash": "0x123abc456def...",
+                  "certificateUrl": "https://api.pragma.io/cert/0x123...pdf",
+                  "remaining_credits": 4999
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dati mancanti o hash non valido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Pagamento Richiesto (Limite Raggiunto)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" },
+                    "message": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "error": "Payment Required",
+                  "message": "Hai raggiunto il limite del piano Startup (5000 richieste). Fai l'upgrade."
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "API Key non valida o account sospeso"
+          }
+        }
+      }
+    },
+    "/certify/{txHash}": {
+      "get": {
+        "tags": [
+          "Certification"
+        ],
+        "summary": "Ottieni stato o PDF",
+        "description": "Recupera lo stato di una transazione e il link al certificato PDF generato.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "txHash",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "L'hash della transazione Blockchain"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dettagli trovati",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" },
+                    "timestamp": { "type": "string" },
+                    "block_number": { "type": "integer" },
+                    "pdf_url": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "status": "Confirmed",
+                  "timestamp": "2025-12-05T14:30:00Z",
+                  "block_number": 123456,
+                  "pdf_url": "https://api.pragma.io/cert/..."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Certificazione non trovata"
+          }
+        }
+      }
+    },
+    "/usage": {
+      "get": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Controlla Usage e Limiti",
+        "description": "Restituisce il consumo attuale del cliente e il limite del piano attivo.",
+        "responses": {
+          "200": {
+            "description": "Dati utilizzo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "client": { "type": "string" },
+                    "plan": { "type": "string" },
+                    "total_requests": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "status": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "client": "Mario Rossi Tech",
+                  "plan": "Startup",
+                  "total_requests": 1542,
+                  "limit": 5000,
+                  "status": "active"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/billing/create-checkout-session": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Crea Link di Pagamento (Upgrade)",
+        "description": "Genera un link Stripe per fare l'upgrade del piano o aggiornare i dati di fatturazione.",
+        "responses": {
+          "200": {
+            "description": "Link generato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "url": "https://checkout.stripe.com/c/pay/..."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/onboarding/register": {
+      "post": {
+        "tags": [
+          "Onboarding"
+        ],
+        "summary": "Registrazione Nuovi Utenti",
+        "description": "Endpoint pubblico per la registrazione. Non richiede Auth.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successo (API Key diretta o Link Pagamento)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "apiKey": { "type": "string" },
+                    "redirectUrl": { "type": "string" }
+                  }
+                },
+                "examples": {
+                  "Developer": {
+                    "summary": "Piano Gratuito",
+                    "value": {
+                      "success": true,
+                      "apiKey": "pk_live_..."
+                    }
+                  },
+                  "Enterprise": {
+                    "summary": "Piano a Pagamento",
+                    "value": {
+                      "success": true,
+                      "redirectUrl": "https://checkout.stripe.com/..."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email già registrata"
+          }
+        }
+      }
+    },
+    "/onboarding/finalize": {
+      "get": {
+        "tags": [
+          "Onboarding"
+        ],
+        "summary": "Callback post-pagamento",
+        "description": "Chiamato dal frontend dopo il ritorno da Stripe per confermare l'account e ottenere la chiave.",
+        "security": [],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "session_id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "description": "L'ID della sessione di checkout Stripe"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account attivato e chiave generata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "apiKey": { "type": "string" },
+                    "email": { "type": "string" }
+                  }
+                },
+                "example": {
+                  "apiKey": "pk_live_...",
+                  "email": "mario@tech.com"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Session ID mancante o invalido"
+          }
+        }
+      }
+    }
+  }
+}

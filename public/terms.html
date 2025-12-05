@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service | Pragma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans leading-relaxed">
+
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="font-bold text-xl tracking-wider flex items-center gap-2">
+                <i class="fas fa-shield-alt text-indigo-600"></i> 
+                <span>PRAGMA <span class="text-slate-400 font-normal">LEGAL</span></span>
+            </div>
+            <a href="/index.html" class="text-sm font-semibold text-slate-500 hover:text-indigo-600 transition">
+                &larr; Back to Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <header class="bg-slate-900 text-white py-16 text-center px-4">
+        <h1 class="text-3xl md:text-5xl font-bold mb-4">Terms of Service</h1>
+        <p class="text-slate-400 max-w-2xl mx-auto text-lg">
+            Please read these terms carefully before using the Pragma API and notarization services.
+        </p>
+        <p class="text-xs text-slate-500 mt-4 uppercase tracking-widest">Last Updated: December 2025</p>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-6 py-12 space-y-12">
+
+        <section>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+                Acceptance of Terms
+            </h2>
+            <p class="text-slate-600 mb-4">
+                By registering for, accessing, or using the Pragma platform ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you must not use the Service.
+            </p>
+            <p class="text-slate-600">
+                Pragma reserves the right to update these terms at any time. Continued use of the service constitutes acceptance of the new terms.
+            </p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+                Nature of Service (Zero-Knowledge)
+            </h2>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4 text-sm text-blue-800">
+                <strong>Crucial:</strong> Pragma is a technical middleware, not a storage provider.
+            </div>
+            <p class="text-slate-600 mb-4">
+                <strong>2.1 No File Storage:</strong> Pragma does not store, view, or have access to your original files. We process the cryptographic hash (SHA-256) of your data in temporary memory and write that hash to the Blockchain.
+            </p>
+            <p class="text-slate-600 mb-4">
+                <strong>2.2 Data Integrity:</strong> You are solely responsible for maintaining the original copies of your files. If you lose the original file, the blockchain proof becomes mathematically useless. Pragma cannot recover lost files.
+            </p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
+                AI Labeling & Responsibility
+            </h2>
+            <p class="text-slate-600 mb-4">
+                <strong>3.1 Self-Assertion:</strong> The "AI Label" (Human Made / AI Generated / Mixed) attached to a certification is a self-asserted declaration by the user. Pragma does not verify the creative origin of the content algorithmically.
+            </p>
+            <p class="text-slate-600">
+                <strong>3.2 Liability:</strong> You accept full legal responsibility for the accuracy of your labeling. Pragma disclaims all liability for mislabeled content, including damages resulting from false "Human Made" claims on AI-generated material.
+            </p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">4</span>
+                Billing, Plans & Limits
+            </h2>
+            <ul class="list-disc list-inside space-y-3 text-slate-600 ml-2">
+                <li><strong>Developer Plan:</strong> Provided free of charge "as is". Limits are strict (50 req/mo). We reserve the right to deprecate free access at any time.</li>
+                <li><strong>Paid Subscriptions (Startup/Scale):</strong> Billed monthly via Stripe. Unused credits do not roll over to the next month.</li>
+                <li><strong>Enterprise (Metered):</strong> Billed based on actual usage at the end of the billing cycle. You are responsible for all usage associated with your API Key.</li>
+                <li><strong>Refunds:</strong> Services are non-refundable once the API credits have been used or the blockchain transaction has been broadcast.</li>
+                <li><strong>Rate Limiting:</strong> Exceeding your plan's limits will result in a `402 Payment Required` error.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">5</span>
+                Blockchain Risks & Immutability
+            </h2>
+            <p class="text-slate-600 mb-4">
+                <strong>5.1 Irreversibility:</strong> Transactions confirmed on the Blockchain (Polygon/Ethereum) are irreversible. You cannot "delete" or "edit" a notarization once processed.
+            </p>
+            <p class="text-slate-600">
+                <strong>5.2 Network Availability:</strong> Pragma relies on public blockchain networks. We are not responsible for delays or failures caused by network congestion, gas price spikes, or consensus failures of the underlying L1/L2 blockchain.
+            </p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">6</span>
+                Prohibited Use
+            </h2>
+            <p class="text-slate-600 mb-4">You agree not to use the Service to:</p>
+            <ul class="list-disc list-inside text-slate-600 space-y-1 ml-4">
+                <li>Notarize illegal material (e.g., CSAM, malware, stolen IP).</li>
+                <li>Attempt to reverse-engineer the API.</li>
+                <li>Resell the API keys without explicit written permission (Enterprise Agreement).</li>
+            </ul>
+            <p class="text-slate-600 mt-4">
+                Violation of these rules will result in immediate account termination without refund.
+            </p>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3">
+                <span class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-sm">7</span>
+                Limitation of Liability
+            </h2>
+            <p class="text-slate-600 uppercase text-sm tracking-wide border-l-2 border-slate-300 pl-4 py-2">
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, PRAGMA SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS OR REVENUES, WHETHER INCURRED DIRECTLY OR INDIRECTLY.
+            </p>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-12 mt-12">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <p class="text-slate-500 mb-4">&copy; 2025 Pragma Inc. All rights reserved.</p>
+            <div class="flex justify-center gap-6 text-sm font-medium">
+                <a href="/index.html" class="text-indigo-600 hover:text-indigo-800">Home</a>
+                <a href="#" class="text-slate-400 hover:text-slate-600">Privacy Policy</a>
+                <a href="#" class="text-slate-400 hover:text-slate-600">Contact Support</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

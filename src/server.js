@@ -4,7 +4,7 @@ const path = require("path");
 
 // --- DOCUMENTAZIONE API (Swagger) ---
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('./swagger'); 
+const swaggerSpecs = require('./swagger.json'); 
 
 // --- SICUREZZA (Middleware) ---
 const requireApiKey = require("./middleware/auth");

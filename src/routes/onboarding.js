@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const supabase = require('../lib/supabase');
+const PLANS = require('../config/plans'); // Ensure this file exists and has correct Price IDs
 const router = express.Router();
 
 // 1. REGISTRAZIONE
@@ -9,9 +10,12 @@ router.post('/register', async (req, res) => {
     try {
         const { name, email, plan } = req.body;
 
-        if (!name || !email) return res.status(400).json({ error: "Dati mancanti." });
+        if (!name || !email || !plan) return res.status(400).json({ error: "Dati mancanti." });
+        
+        // Validate Plan
+        if (!PLANS[plan]) return res.status(400).json({ error: "Piano non valido." });
 
-        // Controllo se esiste già un cliente ATTIVO
+        // Check for existing ACTIVE user
         const { data: existingUser } = await supabase
             .from('clients')
             .select('id, status')
@@ -19,114 +23,125 @@ router.post('/register', async (req, res) => {
             .single();
 
         if (existingUser) {
-            return res.status(409).json({ error: "Email già registrata e attiva." });
+            // If active, block registration
+            if (existingUser.status === 'Attivo') {
+                return res.status(409).json({ error: "Email già registrata e attiva." });
+            }
+            // If "In Attesa" (Pending), we can technically proceed to recovery logic,
+            // but with Zero-Data, "In Attesa" users shouldn't exist in DB for Enterprise.
+            // For Starter, they are active immediately.
+            // So existingUser usually means they are already onboarded.
         }
 
-        // CASO A: STARTER (Gratis) -> Creiamo subito
-        if (plan === 'Starter') {
+        // CASO A: PIANO GRATUITO (Developer) -> Creazione Immediata
+        if (plan === 'Developer') {
             const clientId = `cust_${crypto.randomBytes(8).toString('hex')}`;
             const apiKey = `pk_live_${crypto.randomBytes(24).toString('hex')}`;
 
-            await supabase.from('clients').insert([{
-                id: clientId, name: name, email: email, plan: 'Starter', status: 'Attivo', usage_count: 0
+            // Create Client
+            const { error: clientError } = await supabase.from('clients').insert([{
+                id: clientId, name: name, email: email, plan: 'Developer', status: 'Attivo', usage_count: 0
             }]);
+            if (clientError) throw clientError;
 
+            // Create Key
             await supabase.from('api_keys').insert([{
-                key_id: apiKey, client_id: clientId, name: 'Default Key', type: 'Live', status: 'Attiva'
+                key_id: apiKey, client_id: clientId, name: 'Default Key', status: 'Attiva'
             }]);
 
             return res.json({ success: true, apiKey: apiKey });
         }
 
-        // CASO B: ENTERPRISE (A Pagamento) -> NON SALVIAMO NULLA NEL DB
-        // Passiamo i dati a Stripe nei metadata. Se non paga, noi non sappiamo nulla.
-        if (plan === 'Enterprise') {
+        // CASO B: PIANI A PAGAMENTO (Startup, Scale, Enterprise) -> Stripe Checkout
+        // Zero-Data: No DB insert here. Data goes to Stripe Metadata.
+        if (PLANS[plan].priceId || plan === 'Enterprise') {
             
-            // Generiamo un ID temporaneo solo per Stripe, ma non lo salviamo ancora
+            // Generate a temp ID for reference (will be used as actual ID later)
             const tempClientId = `cust_${crypto.randomBytes(8).toString('hex')}`;
 
             const session = await stripe.checkout.sessions.create({
                 payment_method_types: ['card'],
                 line_items: [{
-                    price_data: {
-                        currency: 'usd',
-                        product_data: { name: 'Pragma Enterprise Plan' },
-                        unit_amount: 49900,
-                        recurring: { interval: 'month' },
-                    },
+                    price: PLANS[plan].priceId,
                     quantity: 1,
                 }],
                 mode: 'subscription',
-                // 🔥 QUI NASCONDIAMO I DATI UTENTE 🔥
+                // Store user data in metadata to retrieve after payment
                 metadata: {
                     pragma_name: name,
                     pragma_email: email,
-                    pragma_client_id: tempClientId
+                    pragma_client_id: tempClientId,
+                    pragma_plan: plan
                 },
                 success_url: `${process.env.FRONTEND_URL.replace('index.html', 'success.html')}?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.FRONTEND_URL.replace('index.html', 'signup.html')}`,
             });
 
-            // Restituiamo solo l'URL. Nel nostro DB non c'è traccia di questo utente.
             return res.json({ success: true, redirectUrl: session.url });
         }
 
     } catch (err) {
+        console.error("Onboarding Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// 2. FINALIZZAZIONE (Creazione Account POST-PAGAMENTO)
+// 2. FINALIZZAZIONE (Post-Pagamento)
 router.get('/finalize', async (req, res) => {
     try {
         const { session_id } = req.query;
         if (!session_id) return res.status(400).json({ error: "Session ID mancante" });
 
-        // Recuperiamo la sessione da Stripe
+        // Retrieve Session
         const session = await stripe.checkout.sessions.retrieve(session_id);
-        
-        if (session.payment_status !== 'paid') {
-            return res.status(402).json({ error: "Pagamento non completato." });
-        }
+        if (session.payment_status !== 'paid') return res.status(402).json({ error: "Pagamento non completato." });
 
-        // 🔥 RECUPERIAMO I DATI DALLA BUSTA DI STRIPE 🔥
-        const { pragma_name, pragma_email, pragma_client_id } = session.metadata;
+        // Retrieve Data from Metadata
+        const { pragma_name, pragma_email, pragma_client_id, pragma_plan } = session.metadata;
 
-        // Controllo di sicurezza: L'abbiamo già creato? (Se l'utente ricarica la pagina)
-        const { data: existingClient } = await supabase.from('clients').select('id').eq('email', pragma_email).single();
+        // Idempotency Check: Did we already create this user?
+        const { data: existingClient } = await supabase.from('clients').select('id, email').eq('email', pragma_email).single();
         
         let clientId = existingClient ? existingClient.id : pragma_client_id;
         let apiKey = null;
 
+        // If client doesn't exist, CREATE NOW
         if (!existingClient) {
-            // È LA PRIMA VOLTA -> CREIAMO ORA IL CLIENTE NEL DB
             await supabase.from('clients').insert([{
                 id: clientId,
                 name: pragma_name,
                 email: pragma_email,
-                plan: 'Enterprise',
-                status: 'Attivo', // Nasce direttamente attivo!
+                plan: pragma_plan, 
+                status: 'Attivo', // Active immediately after payment
                 usage_count: 0,
                 stripe_customer_id: session.customer,
                 stripe_subscription_id: session.subscription
             }]);
+        } else {
+            // If existed (maybe re-subscribing), update plan
+             await supabase.from('clients').update({
+                plan: pragma_plan,
+                status: 'Attivo',
+                stripe_customer_id: session.customer,
+                stripe_subscription_id: session.subscription
+            }).eq('id', clientId);
         }
 
-        // Recuperiamo o Creiamo la chiave
+        // Retrieve or Create Key
         const { data: existingKey } = await supabase.from('api_keys').select('key_id').eq('client_id', clientId).single();
-        
         if (existingKey) {
             apiKey = existingKey.key_id;
         } else {
             apiKey = `pk_live_${crypto.randomBytes(24).toString('hex')}`;
             await supabase.from('api_keys').insert([{
-                key_id: apiKey, client_id: clientId, name: 'Enterprise Key', type: 'Live', status: 'Attiva'
+                key_id: apiKey, client_id: clientId, name: `${pragma_plan} Key`, status: 'Attiva'
             }]);
         }
 
         res.json({ apiKey: apiKey, email: pragma_email });
 
     } catch (err) {
+        console.error("Finalize Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
