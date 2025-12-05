@@ -27,10 +27,7 @@ router.post('/register', async (req, res) => {
             if (existingUser.status === 'Attivo') {
                 return res.status(409).json({ error: "Email già registrata e attiva." });
             }
-            // If "In Attesa" (Pending), we can technically proceed to recovery logic,
-            // but with Zero-Data, "In Attesa" users shouldn't exist in DB for Enterprise.
-            // For Starter, they are active immediately.
-            // So existingUser usually means they are already onboarded.
+            // If "In Attesa", we can proceed to recovery/re-subscription logic below
         }
 
         // CASO A: PIANO GRATUITO (Developer) -> Creazione Immediata
@@ -59,6 +56,10 @@ router.post('/register', async (req, res) => {
             // Generate a temp ID for reference (will be used as actual ID later)
             const tempClientId = `cust_${crypto.randomBytes(8).toString('hex')}`;
 
+            // Costruiamo l'URL base pulito per i redirect
+            // Rimuove eventuali /index.html finali o slash extra
+            const baseUrl = process.env.FRONTEND_URL.replace(/\/index\.html$/, '').replace(/\/$/, '');
+
             const session = await stripe.checkout.sessions.create({
                 payment_method_types: ['card'],
                 line_items: [{
@@ -73,8 +74,8 @@ router.post('/register', async (req, res) => {
                     pragma_client_id: tempClientId,
                     pragma_plan: plan
                 },
-                success_url: `${process.env.FRONTEND_URL.replace('index.html', 'success.html')}?session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${process.env.FRONTEND_URL.replace('index.html', 'signup.html')}`,
+                success_url: `${baseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${baseUrl}/signup.html`,
             });
 
             return res.json({ success: true, redirectUrl: session.url });
