@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Console | Pragma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .loader { border-top-color: #4f46e5; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <div id="loginModal" class="fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
+            <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
+                <i class="fas fa-key"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-2">Developer Login</h2>
+            <p class="text-slate-500 mb-6">Enter your API Key to access the console.</p>
+            
+            <input type="text" id="apiKeyInput" placeholder="pk_live_..." class="w-full border border-slate-300 rounded-lg px-4 py-3 mb-4 focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm">
+            
+            <button onclick="login()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition">
+                Access Dashboard
+            </button>
+            <p class="mt-4 text-xs text-slate-400">Don't have a key? <a href="/signup.html" class="text-indigo-600 hover:underline">Get one here</a></p>
+        </div>
+    </div>
+
+    <aside class="w-64 bg-slate-900 text-white hidden md:flex flex-col justify-between p-6 shadow-xl">
+        <div>
+            <div class="flex items-center gap-3 text-xl font-bold tracking-wider mb-10">
+                <i class="fas fa-cube text-indigo-500"></i> PRAGMA
+            </div>
+            <nav class="space-y-2">
+                <a href="#" class="flex items-center gap-3 bg-slate-800 text-white px-4 py-3 rounded-lg"><i class="fas fa-chart-pie w-5"></i> Overview</a>
+                <a href="/api-docs" target="_blank" class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-3 rounded-lg transition"><i class="fas fa-book w-5"></i> Documentation</a>
+                <a href="mailto:support@pragma.io" class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-3 rounded-lg transition"><i class="fas fa-headset w-5"></i> Support</a>
+            </nav>
+        </div>
+        <div class="border-t border-slate-800 pt-6">
+            <button onclick="logout()" class="flex items-center gap-2 text-slate-400 hover:text-rose-400 transition text-sm">
+                <i class="fas fa-sign-out-alt"></i> Disconnect Key
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto p-8 relative">
+        
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">Dashboard</h1>
+                <p class="text-slate-500 text-sm">Real-time usage statistics</p>
+            </div>
+            <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="text-xs font-mono text-slate-600" id="displayKey">...</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="bg-indigo-50 text-indigo-600 p-3 rounded-lg"><i class="fas fa-crown"></i></div>
+                    <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded uppercase" id="planLabel">Loading...</span>
+                </div>
+                <div class="text-slate-500 text-sm">Current Plan</div>
+                <div class="text-2xl font-bold text-slate-900" id="planName">...</div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><i class="fas fa-bolt"></i></div>
+                    <span class="text-xs font-bold text-slate-400" id="usagePercent">0%</span>
+                </div>
+                <div class="text-slate-500 text-sm">Requests Used</div>
+                <div class="text-2xl font-bold text-slate-900"><span id="reqUsed">0</span> <span class="text-sm text-slate-400 font-normal">/ <span id="reqLimit">∞</span></span></div>
+                <div class="w-full bg-slate-100 h-1.5 mt-3 rounded-full overflow-hidden">
+                    <div id="progressBar" class="bg-emerald-500 h-full rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="bg-blue-50 text-blue-600 p-3 rounded-lg"><i class="fas fa-server"></i></div>
+                    <span class="text-xs font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded">HEALTHY</span>
+                </div>
+                <div class="text-slate-500 text-sm">System Status</div>
+                <div class="text-2xl font-bold text-slate-900">Operational</div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Manual Certification Tool</h3>
+                <span class="text-xs text-slate-500 uppercase tracking-wide">Test Environment</span>
+            </div>
+            <div class="p-8">
+                <div class="max-w-xl mx-auto text-center">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Hash String to Certify</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="manualHash" placeholder="Enter SHA-256 Hash or Text" class="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button onclick="certifyManual()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 font-bold transition flex items-center gap-2">
+                                <i class="fas fa-stamp"></i> Certify
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-2 text-left">Note: This will consume 1 credit from your plan.</p>
+                    </div>
+
+                    <div id="resultArea" class="hidden bg-slate-900 text-emerald-400 p-4 rounded-lg font-mono text-xs text-left overflow-x-auto border border-slate-700">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- LOGIC ---
+        const API_BASE = window.location.origin; // Auto-detect localhost or render
+
+        function checkAuth() {
+            const key = localStorage.getItem('pragma_key');
+            if (key) {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('displayKey').innerText = key.substring(0, 12) + '...';
+                document.getElementById('apiKeyInput').value = key;
+                loadData(key);
+            } else {
+                document.getElementById('loginModal').classList.remove('hidden');
+            }
+        }
+
+        function login() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (!key.startsWith('pk_live_')) {
+                alert('Invalid API Key format');
+                return;
+            }
+            localStorage.setItem('pragma_key', key);
+            checkAuth();
+        }
+
+        function logout() {
+            localStorage.removeItem('pragma_key');
+            window.location.reload();
+        }
+
+        async function loadData(key) {
+            try {
+                const res = await fetch(`${API_BASE}/usage`, {
+                    headers: { 'x-api-key': key }
+                });
+                
+                if (res.status === 403) {
+                    alert("Invalid Key");
+                    logout();
+                    return;
+                }
+
+                const data = await res.json();
+                
+                // Update UI
+                document.getElementById('planName').innerText = data.plan;
+                document.getElementById('planLabel').innerText = data.status;
+                document.getElementById('reqUsed').innerText = data.total_requests;
+                
+                let limit = data.limit;
+                if (limit > 1000000) { // Enterprise unlimited
+                    document.getElementById('reqLimit').innerText = "∞";
+                    document.getElementById('progressBar').style.width = '5%';
+                    document.getElementById('usagePercent').innerText = "Metered";
+                } else {
+                    document.getElementById('reqLimit').innerText = limit;
+                    const percent = Math.min(100, (data.total_requests / limit) * 100);
+                    document.getElementById('progressBar').style.width = percent + '%';
+                    document.getElementById('usagePercent').innerText = Math.round(percent) + '%';
+                    
+                    if(percent > 90) document.getElementById('progressBar').classList.add('bg-rose-500');
+                }
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function certifyManual() {
+            const key = localStorage.getItem('pragma_key');
+            const input = document.getElementById('manualHash').value;
+            const resultArea = document.getElementById('resultArea');
+            
+            if (!input) return;
+
+            // Simple hash gen for demo purposes (if user types text)
+            let hashToSend = input;
+            if (!input.startsWith('0x') && input.length !== 66) {
+                // If simple text, assume we hash it client side purely for the demo
+                const msgBuffer = new TextEncoder().encode(input);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                hashToSend = '0x' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+
+            resultArea.innerText = "Processing on Blockchain...";
+            resultArea.classList.remove('hidden');
+
+            try {
+                const res = await fetch(`${API_BASE}/certify`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-api-key': key 
+                    },
+                    body: JSON.stringify({ 
+                        hash: hashToSend,
+                        ai_label: "Human" // Default for manual test
+                    })
+                });
+
+                const data = await res.json();
+                resultArea.innerText = JSON.stringify(data, null, 2);
+                
+                // Reload usage
+                setTimeout(() => loadData(key), 1000);
+
+            } catch (err) {
+                resultArea.innerText = "Error: " + err.message;
+            }
+        }
+
+        // Init
+        checkAuth();
+    </script>
+</body>
+</html>
